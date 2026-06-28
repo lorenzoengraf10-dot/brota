@@ -1,0 +1,7 @@
+[site]
+bucket = "./dist"
+
+[env.production]
+name = "brota"
+route = "brotaonline.com/*"
+compatibility_date = "2024-01-01"
