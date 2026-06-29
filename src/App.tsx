@@ -15,6 +15,7 @@ import Products from '@/components/Products'
 import Clients from '@/components/Clients'
 import Expenses from '@/components/Expenses'
 import SocialMedia from '@/components/SocialMedia'
+import Calendar from '@/components/Calendar'
 import Settings from '@/components/Settings'
 import Landing from '@/components/Landing'
 import PrivacyPolicy from '@/components/PrivacyPolicy'
@@ -54,6 +55,7 @@ export default function App() {
     clients: <Clients />,
     expenses: <Expenses />,
     social: <SocialMedia />,
+    calendar: <Calendar />,
     settings: <Settings />,
   }
 
@@ -62,10 +64,14 @@ export default function App() {
       <div className="flex flex-col h-full max-w-lg mx-auto">
         <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#e5e0d5] sticky top-0 z-40">
           <div className="flex items-center gap-2">
-            <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="64" height="64" rx="14" fill="#059669"/>
-              <path d="M32 12 C20 12 14 22 16 32 C18 42 26 50 32 52 C38 50 46 42 48 32 C50 22 44 12 32 12Z" fill="#f6f2e8" opacity="0.9"/>
-              <path d="M32 28 L32 52 M24 36 C24 36 28 32 32 34 C36 36 40 32 40 32" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+            <svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="100" height="100" rx="22" fill="#059669"/>
+              <rect x="29" y="72" width="42" height="8" rx="4" fill="white"/>
+              <path d="M50 70 C50 58 44 52 40 42" stroke="white" strokeWidth="7" strokeLinecap="round" fill="none"/>
+              <ellipse cx="32" cy="46" rx="22" ry="13" transform="rotate(-35 32 46)" fill="white"/>
+              <ellipse cx="32" cy="46" rx="13" ry="6.5" transform="rotate(-35 32 46)" fill="#059669"/>
+              <ellipse cx="63" cy="32" rx="17" ry="10" transform="rotate(30 63 32)" fill="white"/>
+              <ellipse cx="63" cy="32" rx="9.5" ry="5" transform="rotate(30 63 32)" fill="#059669"/>
             </svg>
             <span className="font-semibold text-[#059669] text-lg">Brota</span>
           </div>

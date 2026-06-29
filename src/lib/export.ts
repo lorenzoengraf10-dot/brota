@@ -24,14 +24,20 @@ export function exportSales(sales: Sale[]) {
   dl(
     `brota-ventas-${today()}.csv`,
     toCSV(
-      ['Fecha', 'Cliente', 'Productos', 'Total', 'Método de pago', 'Estado', 'Notas'],
+      ['Fecha', 'Cliente', 'Productos', 'Subtotal', 'Descuento', 'Total', 'Método de pago', 'Estado pago', 'Estado pedido', 'Fecha entrega', 'Notas'],
       sales.map((s) => [
         new Date(s.createdAt).toLocaleDateString('es-AR'),
         s.clientName ?? 'Cliente ocasional',
         s.items.map((i) => `${i.productName} x${i.quantity}`).join(' | '),
+        s.subtotal ?? s.total,
+        s.discountAmount ?? '',
         s.total,
         s.paymentMethod,
         s.status,
+        s.orderStatus ?? '',
+        s.deliveryDate
+          ? new Date(s.deliveryDate + 'T12:00:00').toLocaleDateString('es-AR')
+          : '',
         s.notes ?? '',
       ])
     )

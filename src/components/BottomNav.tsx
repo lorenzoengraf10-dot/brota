@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingCart, Package, Users, CreditCard, Share2 } from 'lucide-react'
+import { LayoutDashboard, ShoppingCart, Package, Users, CreditCard, CalendarDays } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 
 const tabs = [
@@ -7,7 +7,7 @@ const tabs = [
   { id: 'products', label: 'Productos', icon: Package },
   { id: 'clients', label: 'Clientes', icon: Users },
   { id: 'expenses', label: 'Gastos', icon: CreditCard },
-  { id: 'social', label: 'Redes', icon: Share2 }
+  { id: 'calendar', label: 'Agenda', icon: CalendarDays },
 ] as const
 
 export default function BottomNav() {

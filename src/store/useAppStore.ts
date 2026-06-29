@@ -9,6 +9,7 @@ type View =
   | 'clients'
   | 'expenses'
   | 'social'
+  | 'calendar'
   | 'settings'
   | 'landing'
   | 'privacy'

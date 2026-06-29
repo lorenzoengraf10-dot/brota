@@ -54,9 +54,15 @@ export interface Sale {
   clientId?: string
   clientName?: string
   items: SaleItem[]
+  subtotal?: number
+  discount?: number
+  discountType?: 'percentage' | 'fixed'
+  discountAmount?: number
   total: number
   paymentMethod: 'efectivo' | 'transferencia' | 'debito' | 'credito' | 'otro'
   status: 'pendiente' | 'pagado' | 'cancelado'
+  orderStatus?: 'pendiente' | 'listo' | 'completado'
+  deliveryDate?: string
   notes?: string
   createdAt: string
 }

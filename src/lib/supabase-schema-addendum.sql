@@ -1,6 +1,6 @@
--- Agregar tabla para planes de usuario
--- Ejecutar en Supabase SQL Editor (complemento al schema principal)
-
+-- ============================================================
+-- ADDENDUM 1: tabla para planes de usuario
+-- ============================================================
 CREATE TABLE IF NOT EXISTS user_plans (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   plan TEXT NOT NULL DEFAULT 'free',  -- 'free' | 'pro'
@@ -11,22 +11,29 @@ CREATE TABLE IF NOT EXISTS user_plans (
 
 ALTER TABLE user_plans ENABLE ROW LEVEL SECURITY;
 
--- Los usuarios solo pueden LEER su propio plan.
--- El admin activa Pro directamente desde el dashboard de Supabase.
 CREATE POLICY "Users read own plan" ON user_plans
   FOR SELECT USING (auth.uid() = user_id);
 
--- ============================================================
--- Para ACTIVAR el plan Pro de un usuario desde Supabase:
--- ============================================================
+-- Para ACTIVAR Pro:
 -- INSERT INTO user_plans (user_id, plan, activated_at)
--- VALUES ('<pegar-uuid-del-usuario>', 'pro', now())
+-- VALUES ('<uuid>', 'pro', now())
 -- ON CONFLICT (user_id) DO UPDATE
 --   SET plan = 'pro', activated_at = now(), updated_at = now();
 --
--- Para DESACTIVAR (volver a free):
--- UPDATE user_plans SET plan = 'free', updated_at = now()
--- WHERE user_id = '<uuid>';
+-- Para volver a free:
+-- UPDATE user_plans SET plan = 'free', updated_at = now() WHERE user_id = '<uuid>';
+-- El UUID del usuario está en Supabase → Authentication → Users
+
 -- ============================================================
--- El UUID del usuario se ve en Supabase → Authentication → Users
+-- ADDENDUM 2: columnas para pedidos y descuentos en la tabla sales
 -- ============================================================
+ALTER TABLE sales
+  ADD COLUMN IF NOT EXISTS subtotal DECIMAL(12,2),
+  ADD COLUMN IF NOT EXISTS discount DECIMAL(12,2),
+  ADD COLUMN IF NOT EXISTS discount_type TEXT,      -- 'percentage' | 'fixed'
+  ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(12,2),
+  ADD COLUMN IF NOT EXISTS order_status TEXT,       -- 'pendiente' | 'listo' | 'completado'
+  ADD COLUMN IF NOT EXISTS delivery_date DATE;
+
+-- Índice para consultas por estado de pedido
+CREATE INDEX IF NOT EXISTS idx_sales_order_status ON sales(user_id, order_status);
