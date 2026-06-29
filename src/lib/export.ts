@@ -1,10 +1,15 @@
-import type { Sale, Expense, Product, Client } from '@/types'
+import type { Order, Expense, Product, Customer } from '@/types'
+import { formatDate, formatCurrency } from './format'
+import { orderTotal } from './receipt'
 
 function esc(v: string | number | undefined): string {
   return `"${String(v ?? '').replace(/"/g, '""')}"`
 }
 
-function toCSV(headers: string[], rows: (string | number | undefined)[][]): string {
+function toCSV(
+  headers: string[],
+  rows: (string | number | undefined)[][]
+): string {
   return '﻿' + [headers, ...rows].map((r) => r.map(esc).join(',')).join('\n')
 }
 
@@ -18,27 +23,25 @@ function dl(filename: string, content: string) {
   URL.revokeObjectURL(url)
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const todayStr = () => new Date().toISOString().slice(0, 10)
 
-export function exportSales(sales: Sale[]) {
+export function exportOrders(orders: Order[]) {
   dl(
-    `brota-ventas-${today()}.csv`,
+    `brota-ventas-${todayStr()}.csv`,
     toCSV(
-      ['Fecha', 'Cliente', 'Productos', 'Subtotal', 'Descuento', 'Total', 'Método de pago', 'Estado pago', 'Estado pedido', 'Fecha entrega', 'Notas'],
-      sales.map((s) => [
-        new Date(s.createdAt).toLocaleDateString('es-AR'),
-        s.clientName ?? 'Cliente ocasional',
-        s.items.map((i) => `${i.productName} x${i.quantity}`).join(' | '),
-        s.subtotal ?? s.total,
-        s.discountAmount ?? '',
-        s.total,
-        s.paymentMethod,
-        s.status,
-        s.orderStatus ?? '',
-        s.deliveryDate
-          ? new Date(s.deliveryDate + 'T12:00:00').toLocaleDateString('es-AR')
+      ['Fecha', 'Cliente', 'Productos', 'Descuento', 'Total', 'Pago', 'Estado', 'Entrega', 'Nota'],
+      orders.map((o) => [
+        formatDate(o.date),
+        o.customerName || 'Cliente ocasional',
+        o.items.map((i) => `${i.name} x${i.quantity}`).join(' | '),
+        o.discount > 0
+          ? o.discountType === 'percent' ? `${o.discount}%` : formatCurrency(o.discount)
           : '',
-        s.notes ?? '',
+        orderTotal(o),
+        o.paymentMethod,
+        o.status === 'pending' ? 'Pendiente' : o.status === 'ready' ? 'Listo' : 'Completado',
+        o.dueDate ? formatDate(o.dueDate) : '',
+        o.note,
       ])
     )
   )
@@ -46,37 +49,41 @@ export function exportSales(sales: Sale[]) {
 
 export function exportExpenses(expenses: Expense[]) {
   dl(
-    `brota-gastos-${today()}.csv`,
+    `brota-gastos-${todayStr()}.csv`,
     toCSV(
-      ['Fecha', 'Descripción', 'Categoría', 'Monto', 'Notas'],
-      expenses.map((e) => [e.date, e.description, e.category, e.amount, e.notes ?? ''])
+      ['Fecha', 'Categoría', 'Monto', 'Nota'],
+      expenses.map((e) => [formatDate(e.date), e.category, e.amount, e.note])
     )
   )
 }
 
 export function exportProducts(products: Product[]) {
   dl(
-    `brota-productos-${today()}.csv`,
+    `brota-productos-${todayStr()}.csv`,
     toCSV(
-      ['Nombre', 'Categoría', 'Precio de venta', 'Costo', 'Stock', 'Activo'],
+      ['Nombre', 'Precio venta', 'Costo', 'Stock'],
       products.map((p) => [
         p.name,
-        p.category ?? '',
-        p.price,
-        p.cost ?? '',
-        p.stock ?? '',
-        p.active ? 'Sí' : 'No',
+        p.salePrice,
+        p.costPrice,
+        p.stock ?? 'Sin inventario',
       ])
     )
   )
 }
 
-export function exportClients(clients: Client[]) {
+export function exportCustomers(customers: Customer[]) {
   dl(
-    `brota-clientes-${today()}.csv`,
+    `brota-clientes-${todayStr()}.csv`,
     toCSV(
-      ['Nombre', 'Teléfono', 'Email', 'Dirección', 'Notas'],
-      clients.map((c) => [c.name, c.phone ?? '', c.email ?? '', c.address ?? '', c.notes ?? ''])
+      ['Nombre', 'Teléfono', 'Edad', 'Sexo', 'Notas'],
+      customers.map((c) => [
+        c.name,
+        c.phone,
+        c.age ?? '',
+        c.sex,
+        c.notes,
+      ])
     )
   )
 }

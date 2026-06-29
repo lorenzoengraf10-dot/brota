@@ -1,98 +1,118 @@
-export interface User {
+export type Sex = 'F' | 'M' | 'Otro' | ''
+export type DiscountType = 'amount' | 'percent'
+export type PaymentMethod = 'efectivo' | 'mercadopago' | 'transferencia'
+export type Platform = 'instagram' | 'tiktok' | 'facebook'
+export type OrderStatus = 'pending' | 'ready' | 'completed'
+export type AppointmentType = 'cita' | 'tarea' | 'recordatorio' | 'otro'
+export type ExpenseCategory =
+  | 'insumos'
+  | 'servicios'
+  | 'alquiler'
+  | 'sueldos'
+  | 'impuestos'
+  | 'envios'
+  | 'marketing'
+  | 'otros'
+export type Plan = 'free' | 'pro'
+
+export interface Business {
   id: string
-  email: string
-  businessName?: string
-  plan: 'free' | 'pro'
+  name: string
+  currency: string
   createdAt: string
 }
 
 export interface Product {
   id: string
-  userId: string
+  businessId: string
   name: string
-  description?: string
-  price: number
-  cost?: number
-  stock?: number
-  category?: string
-  imageUrl?: string
-  active: boolean
+  costPrice: number
+  salePrice: number
+  stock: number | null
   createdAt: string
 }
 
-export interface Client {
+export interface CustomerGroup {
   id: string
-  userId: string
+  businessId: string
   name: string
-  phone?: string
-  email?: string
-  address?: string
-  groupId?: string
-  notes?: string
+  color: string
   createdAt: string
 }
 
-export interface ClientGroup {
+export interface Customer {
   id: string
-  userId: string
+  businessId: string
   name: string
-  color?: string
+  phone: string
+  age: number | null
+  sex: Sex
+  groupId: string | null
+  notes: string
   createdAt: string
 }
 
-export interface SaleItem {
+export interface OrderItem {
   productId: string
-  productName: string
+  name: string
   quantity: number
-  unitPrice: number
-  subtotal: number
+  unitSalePrice: number
+  unitCostPrice: number
 }
 
-export interface Sale {
+export interface Order {
   id: string
-  userId: string
-  clientId?: string
-  clientName?: string
-  items: SaleItem[]
-  subtotal?: number
-  discount?: number
-  discountType?: 'percentage' | 'fixed'
-  discountAmount?: number
-  total: number
-  paymentMethod: 'efectivo' | 'transferencia' | 'debito' | 'credito' | 'otro'
-  status: 'pendiente' | 'pagado' | 'cancelado'
-  orderStatus?: 'pendiente' | 'listo' | 'completado'
-  deliveryDate?: string
-  notes?: string
+  businessId: string
+  customerId: string | null
+  customerName: string
+  items: OrderItem[]
+  discount: number
+  discountType: DiscountType
+  status: OrderStatus
+  dueDate: string | null
+  date: string
+  note: string
+  paymentMethod: PaymentMethod
+  createdAt: string
+}
+
+export interface SocialMetric {
+  id: string
+  businessId: string
+  platform: Platform
+  weekStart: string
+  reach: number
+  interactions: number
+  newFollowers: number
+  posts: number
   createdAt: string
 }
 
 export interface Expense {
   id: string
-  userId: string
-  description: string
+  businessId: string
   amount: number
-  category: string
+  category: ExpenseCategory
+  note: string
   date: string
-  notes?: string
   createdAt: string
 }
 
-export interface SocialLink {
-  platform: 'instagram' | 'facebook' | 'tiktok' | 'twitter' | 'whatsapp' | 'website' | 'otro'
-  url: string
-  handle?: string
+export interface Appointment {
+  id: string
+  businessId: string
+  title: string
+  description: string
+  type: AppointmentType
+  date: string
+  createdAt: string
 }
 
-export interface BusinessProfile {
-  userId: string
-  businessName: string
-  description?: string
-  phone?: string
-  address?: string
-  logoUrl?: string
-  socialLinks: SocialLink[]
-  updatedAt: string
+export interface AppUser {
+  id: string
+  email: string
+  plan: Plan
+  businessId: string | null
 }
 
 export interface Notification {
@@ -102,15 +122,4 @@ export interface Notification {
   type: 'info' | 'success' | 'warning' | 'error'
   read: boolean
   createdAt: string
-}
-
-export interface DashboardStats {
-  totalSalesToday: number
-  totalSalesWeek: number
-  totalSalesMonth: number
-  totalExpensesMonth: number
-  netProfitMonth: number
-  totalClients: number
-  totalProducts: number
-  recentSales: Sale[]
 }
