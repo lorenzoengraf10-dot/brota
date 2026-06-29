@@ -1,14 +1,52 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --color-primary: #059669;
-  --color-bg: #f6f2e8;
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-cream: #f6f2e8;
   --color-surface: #ffffff;
-  --color-text: #1a1a1a;
-  --color-muted: #6b7280;
-  --color-border: #e5e0d5;
+  --color-ink: #1f2a37;
+  --color-ink-soft: #5b6675;
+
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+
+  --color-azure-50: #eff6ff;
+  --color-azure-100: #dbeafe;
+  --color-azure-200: #bfdbfe;
+  --color-azure-300: #93c5fd;
+  --color-azure-400: #60a5fa;
+  --color-azure-500: #3b82f6;
+  --color-azure-600: #2563eb;
+  --color-azure-700: #1d4ed8;
+}
+
+.dark {
+  --color-cream: #0f1722;
+  --color-surface: #1a2433;
+  --color-ink: #e8edf4;
+  --color-ink-soft: #94a3b8;
+}
+
+html, body, #root {
+  height: 100%;
+  height: 100dvh;
+}
+
+body {
+  background-color: var(--color-cream);
+  color: var(--color-ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
 }
 
 * {
@@ -16,24 +54,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-html, body, #root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  background-color: var(--color-bg);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: var(--color-text);
-  overflow-x: hidden;
-}
-
-/* Scrollbar sutil */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #c9c3b5; border-radius: 4px; }
-
-/* Animaciones de entrada */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.animate-in { animation: fadeIn 0.25s ease-out both; }
+::-webkit-scrollbar-thumb { background: rgb(0 0 0 / 0.12); border-radius: 2px; }
+.dark ::-webkit-scrollbar-thumb { background: rgb(255 255 255 / 0.08); }
