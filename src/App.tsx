@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
+import { Settings as SettingsIcon } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useAppStore } from '@/store/useAppStore'
 import { initGA } from '@/lib/analytics'
@@ -14,6 +15,7 @@ import Products from '@/components/Products'
 import Clients from '@/components/Clients'
 import Expenses from '@/components/Expenses'
 import SocialMedia from '@/components/SocialMedia'
+import Settings from '@/components/Settings'
 import Landing from '@/components/Landing'
 import PrivacyPolicy from '@/components/PrivacyPolicy'
 import TermsAndConditions from '@/components/TermsAndConditions'
@@ -51,7 +53,8 @@ export default function App() {
     products: <Products />,
     clients: <Clients />,
     expenses: <Expenses />,
-    social: <SocialMedia />
+    social: <SocialMedia />,
+    settings: <Settings />,
   }
 
   return (
@@ -66,7 +69,19 @@ export default function App() {
             </svg>
             <span className="font-semibold text-[#059669] text-lg">Brota</span>
           </div>
-          <NotificationsBell />
+          <div className="flex items-center gap-1">
+            <NotificationsBell />
+            <button
+              onClick={() => setView('settings')}
+              className={`p-2 rounded-full transition-colors ${
+                currentView === 'settings'
+                  ? 'text-[#059669] bg-[#f6f2e8]'
+                  : 'text-gray-400 hover:bg-[#f6f2e8]'
+              }`}
+            >
+              <SettingsIcon size={20} />
+            </button>
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto">
