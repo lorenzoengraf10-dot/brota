@@ -118,6 +118,7 @@ interface StoreState {
 
   // Bootstrap
   ensureBusiness: (userId: string) => Promise<Business>
+  updateBusiness: (id: string, data: Partial<Business>) => Promise<void>
   fetchAll: (businessId: string) => Promise<void>
 
   // Products
@@ -272,6 +273,11 @@ export const useStore = create<StoreState>()(
         const biz = toCamel<Business>(created as Record<string, unknown>)
         set({ business: biz })
         return biz
+      },
+
+      updateBusiness: async (id, data) => {
+        set((s) => ({ business: s.business ? { ...s.business, ...data } : s.business }))
+        await supabase.from('businesses').update(toSnake(data as Record<string, unknown>)).eq('id', id)
       },
 
       fetchAll: async (businessId) => {

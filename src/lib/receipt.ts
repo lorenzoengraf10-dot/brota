@@ -49,7 +49,7 @@ export function buildReceipt(order: Order, businessName: string): string {
 
 export function openWhatsApp(phone: string, message: string): void {
   const clean = phone.replace(/\D/g, '')
-  const num = clean.startsWith('54') ? clean : `54${clean}`
+  const num = clean ? (clean.startsWith('54') ? clean : `54${clean}`) : ''
   window.open(
     `https://wa.me/${num}?text=${encodeURIComponent(message)}`,
     '_blank'
