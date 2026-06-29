@@ -1,17 +1,15 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Check, Zap } from 'lucide-react'
+import { X, Check, MessageCircle } from 'lucide-react'
+import { waProLink, PRO_PRICE } from '@/lib/plans'
 
-interface Props {
-  open: boolean
-  onClose: () => void
-}
+interface Props { open: boolean; onClose: () => void }
 
 const proFeatures = [
-  'Ventas, productos y clientes ilimitados',
-  'Exportar datos a Excel / PDF',
+  'Productos, clientes y ventas ilimitados',
+  'Exportación de datos a Excel (CSV)',
   'Reportes avanzados y comparativas',
-  'Múltiples sucursales',
-  'Soporte prioritario',
+  'Múltiples sucursales (próximamente)',
+  'Soporte prioritario por WhatsApp',
 ]
 
 export default function UpgradeModal({ open, onClose }: Props) {
@@ -35,15 +33,21 @@ export default function UpgradeModal({ open, onClose }: Props) {
           >
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
-                <Zap size={20} className="text-[#059669]" />
-                <h3 className="font-bold text-lg">Actualizar a Pro</h3>
+                <span className="text-2xl">🌱</span>
+                <h3 className="font-bold text-lg">Plan Pro</h3>
               </div>
               <button onClick={onClose}><X size={20} /></button>
             </div>
 
-            <div className="bg-[#f6f2e8] rounded-2xl p-4 mb-5">
-              <p className="text-2xl font-bold text-[#059669]">$X<span className="text-sm font-normal text-gray-500">/mes</span></p>
-              <p className="text-xs text-gray-500 mt-0.5">Cancelá cuando quieras</p>
+            <div className="bg-gradient-to-br from-[#059669] to-emerald-400 rounded-2xl p-4 mb-5 text-white">
+              <p className="text-sm opacity-80 mb-1">Precio mensual</p>
+              <p className="text-3xl font-bold">
+                {PRO_PRICE}
+                <span className="text-base font-normal opacity-70">/mes</span>
+              </p>
+              <p className="text-xs opacity-70 mt-1">
+                Activación por WhatsApp · Sin tarjetas · Cancelá cuando quieras
+              </p>
             </div>
 
             <ul className="space-y-3 mb-6">
@@ -57,11 +61,18 @@ export default function UpgradeModal({ open, onClose }: Props) {
               ))}
             </ul>
 
-            <button className="w-full py-3 bg-[#059669] text-white font-semibold rounded-xl text-sm">
-              Suscribirme al plan Pro
-            </button>
-            <button onClick={onClose} className="w-full py-2 text-gray-400 text-sm mt-2">
-              No por ahora
+            <a
+              href={waProLink()}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="w-full py-3.5 bg-[#25D366] text-white font-semibold rounded-xl text-sm flex items-center justify-center gap-2"
+            >
+              <MessageCircle size={18} />
+              Activar por WhatsApp
+            </a>
+            <button onClick={onClose} className="w-full py-2.5 text-gray-400 text-sm mt-1">
+              Más tarde
             </button>
           </motion.div>
         </motion.div>
