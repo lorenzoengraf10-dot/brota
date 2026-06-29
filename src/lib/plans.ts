@@ -1,8 +1,8 @@
-// Límites del plan gratuito
+// Límites del plan gratuito (generosos para el crecimiento)
 export const FREE_LIMITS = {
-  products: 30,
-  clients: 50,
-  salesPerMonth: 100,
+  products: 100,
+  clients: 200,
+  salesPerMonth: 500,
 }
 
 // Actualizar el precio aquí cuando sea necesario
