@@ -1,7 +1,10 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Sprout, Settings } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import BottomNav from './BottomNav'
+import FeedbackModal from '@/components/marketing/FeedbackModal'
+import ProEntryModal from '@/components/marketing/ProEntryModal'
+import { today } from '@/lib/format'
 
 const Dashboard = lazy(() => import('@/views/Dashboard'))
 const Orders = lazy(() => import('@/views/Orders'))
@@ -12,6 +15,9 @@ const Social = lazy(() => import('@/views/Social'))
 const Expenses = lazy(() => import('@/views/Expenses'))
 const Calendar = lazy(() => import('@/views/Calendar'))
 const SettingsView = lazy(() => import('@/views/Settings'))
+
+const INSTALL_KEY = 'brota-install'
+const FEEDBACK_KEY = 'brota-feedback-asked'
 
 function ViewLoader() {
   return (
@@ -36,8 +42,39 @@ function CurrentView({ view }: { view: string }) {
 }
 
 export default function AppLayout() {
-  const { currentView, setView, notifications } = useStore()
+  const { currentView, setView, notifications, user } = useStore()
   const unread = notifications.filter((n) => !n.read).length
+  const [showPro, setShowPro] = useState(false)
+  const [showFeedback, setShowFeedback] = useState(false)
+
+  useEffect(() => {
+    if (!user) return
+
+    // Record first-use date
+    const install = localStorage.getItem(INSTALL_KEY) ?? today()
+    if (!localStorage.getItem(INSTALL_KEY)) localStorage.setItem(INSTALL_KEY, install)
+
+    // Check if weekly feedback is due
+    const lastFeedback = localStorage.getItem(FEEDBACK_KEY)
+    const refDate = lastFeedback ?? install
+    const days = Math.floor((Date.now() - new Date(refDate).getTime()) / 86400000)
+    const feedbackDue = days >= 7
+
+    const t = setTimeout(() => {
+      if (feedbackDue) {
+        setShowFeedback(true)
+      } else if (user.plan !== 'pro') {
+        setShowPro(true)
+      }
+    }, 1500)
+
+    return () => clearTimeout(t)
+  }, [user?.id])
+
+  function handleFeedbackClose() {
+    localStorage.setItem(FEEDBACK_KEY, today())
+    setShowFeedback(false)
+  }
 
   return (
     <div className="flex flex-col h-full max-w-lg mx-auto bg-cream">
@@ -69,6 +106,9 @@ export default function AppLayout() {
       </main>
 
       <BottomNav />
+
+      <FeedbackModal open={showFeedback} onClose={handleFeedbackClose} />
+      <ProEntryModal open={showPro} onClose={() => setShowPro(false)} />
     </div>
   )
 }
