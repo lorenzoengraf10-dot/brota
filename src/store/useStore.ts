@@ -8,6 +8,7 @@ import type {
   CustomerGroup,
   Customer,
   Order,
+  OrderItem,
   Expense,
   SocialMetric,
   Appointment,
@@ -93,6 +94,8 @@ interface StoreState {
 
   // Business
   business: Business | null
+  businesses: Business[]
+  activeBusinessId: string | null
 
   // Data
   products: Product[]
@@ -120,6 +123,8 @@ interface StoreState {
   // Bootstrap
   ensureBusiness: (userId: string) => Promise<Business>
   updateBusiness: (id: string, data: Partial<Business>) => Promise<void>
+  addBusiness: (name: string) => Promise<void>
+  switchBusiness: (id: string) => Promise<void>
   fetchAll: (businessId: string) => Promise<void>
 
   // Products
@@ -138,6 +143,7 @@ interface StoreState {
   deleteGroup: (id: string) => Promise<void>
 
   // Orders
+  applyStock: (items: OrderItem[], sign: 1 | -1) => Promise<void>
   addOrder: (o: Omit<Order, 'id' | 'createdAt'>) => Promise<void>
   updateOrder: (id: string, o: Partial<Order>) => Promise<void>
   deleteOrder: (id: string) => Promise<void>
@@ -177,6 +183,8 @@ export const useStore = create<StoreState>()(
       user: null,
       loadingAuth: true,
       business: null,
+      businesses: [],
+      activeBusinessId: null,
       products: [],
       customers: [],
       customerGroups: [],
@@ -265,28 +273,52 @@ export const useStore = create<StoreState>()(
           .select('*')
           .eq('user_id', userId)
           .order('created_at')
-          .limit(1)
-          .single()
 
-        if (data) {
-          const biz = toCamel<Business>(data as Record<string, unknown>)
-          set({ business: biz })
-          return biz
+        let list = mapRows<Business>((data ?? []) as Record<string, unknown>[])
+
+        if (list.length === 0) {
+          const { data: created } = await supabase
+            .from('businesses')
+            .insert({ user_id: userId, name: 'Mi emprendimiento', currency: 'ARS' })
+            .select()
+            .single()
+          list = [toCamel<Business>(created as Record<string, unknown>)]
         }
 
-        const { data: created } = await supabase
-          .from('businesses')
-          .insert({ user_id: userId, name: 'Mi emprendimiento', currency: 'ARS' })
-          .select()
-          .single()
-        const biz = toCamel<Business>(created as Record<string, unknown>)
-        set({ business: biz })
-        return biz
+        // Restaurar el emprendimiento activo si sigue existiendo
+        const savedId = get().activeBusinessId
+        const active = list.find((b) => b.id === savedId) ?? list[0]
+        set({ businesses: list, business: active, activeBusinessId: active.id })
+        return active
       },
 
       updateBusiness: async (id, data) => {
-        set((s) => ({ business: s.business ? { ...s.business, ...data } : s.business }))
+        set((s) => ({
+          business: s.business?.id === id ? { ...s.business, ...data } : s.business,
+          businesses: s.businesses.map((b) => (b.id === id ? { ...b, ...data } : b)),
+        }))
         await supabase.from('businesses').update(toSnake(data as Record<string, unknown>)).eq('id', id)
+      },
+
+      addBusiness: async (name) => {
+        const { user } = get()
+        if (!user) return
+        const { data: created } = await supabase
+          .from('businesses')
+          .insert({ user_id: user.id, name, currency: 'ARS' })
+          .select()
+          .single()
+        if (!created) return
+        const biz = toCamel<Business>(created as Record<string, unknown>)
+        set((s) => ({ businesses: [...s.businesses, biz] }))
+        await get().switchBusiness(biz.id)
+      },
+
+      switchBusiness: async (id) => {
+        const biz = get().businesses.find((b) => b.id === id)
+        if (!biz) return
+        set({ business: biz, activeBusinessId: id, currentView: 'dashboard' })
+        await get().fetchAll(id)
       },
 
       fetchAll: async (businessId) => {
@@ -358,18 +390,54 @@ export const useStore = create<StoreState>()(
       },
 
       // ── orders ────────────────────────────────────
+      // Ajusta el stock de los productos con control activo (stock !== null).
+      // sign = -1 al vender, +1 al deshacer (borrar/editar pedido).
+      applyStock: async (items: OrderItem[], sign: 1 | -1) => {
+        const deltas = new Map<string, number>()
+        for (const it of items) {
+          if (!it.productId) continue
+          deltas.set(it.productId, (deltas.get(it.productId) ?? 0) + sign * it.quantity)
+        }
+        const { products } = get()
+        const updates: { id: string; stock: number }[] = []
+        for (const [pid, delta] of deltas) {
+          const p = products.find((x) => x.id === pid)
+          if (!p || p.stock === null) continue
+          updates.push({ id: pid, stock: Math.max(0, p.stock + delta) })
+        }
+        if (updates.length === 0) return
+        set((s) => ({
+          products: s.products.map((p) => {
+            const u = updates.find((x) => x.id === p.id)
+            return u ? { ...p, stock: u.stock } : p
+          }),
+        }))
+        await Promise.all(
+          updates.map((u) => supabase.from('products').update({ stock: u.stock }).eq('id', u.id))
+        )
+      },
+
       addOrder: async (o) => {
         const item: Order = { ...o, id: uid(), createdAt: now() }
         set((s) => ({ orders: [item, ...s.orders] }))
         await supabase.from('orders').insert(toSnake(item as unknown as Record<string, unknown>))
+        await get().applyStock(item.items, -1)
       },
       updateOrder: async (id, o) => {
+        const prev = get().orders.find((x) => x.id === id)
         set((s) => ({ orders: s.orders.map((x) => x.id === id ? { ...x, ...o } : x) }))
         await supabase.from('orders').update(toSnake(o as unknown as Record<string, unknown>)).eq('id', id)
+        // Si cambiaron los ítems, revertir el descuento anterior y aplicar el nuevo
+        if (o.items && prev) {
+          await get().applyStock(prev.items, 1)
+          await get().applyStock(o.items, -1)
+        }
       },
       deleteOrder: async (id) => {
+        const prev = get().orders.find((x) => x.id === id)
         set((s) => ({ orders: s.orders.filter((x) => x.id !== id) }))
         await supabase.from('orders').delete().eq('id', id)
+        if (prev) await get().applyStock(prev.items, 1)
       },
 
       // ── expenses ──────────────────────────────────
@@ -466,6 +534,7 @@ export const useStore = create<StoreState>()(
         cookieConsent: s.cookieConsent,
         onboardingDone: s.onboardingDone,
         landingSeen: s.landingSeen,
+        activeBusinessId: s.activeBusinessId,
         user: s.user
           ? {
               id: s.user.id,

@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { Plus, X, Trash2, MessageCircle, Users, Tag } from 'lucide-react'
+import { Plus, X, Trash2, MessageCircle, Users, Tag, HandCoins } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { isAtLimit, FREE_LIMITS } from '@/lib/plan'
+import { formatCurrency } from '@/lib/format'
+import { orderTotal, openWhatsApp } from '@/lib/receipt'
 import { trackEvent } from '@/lib/gaTracking'
 import UpgradeModal from '@/components/plan/UpgradeModal'
 import type { Customer, Sex } from '@/types'
@@ -13,7 +15,7 @@ function emptyCustomer(businessId: string): Omit<Customer, 'id' | 'createdAt'> {
 }
 
 export default function Customers() {
-  const { customers, customerGroups, business, user, addCustomer, updateCustomer, deleteCustomer, setView } = useStore()
+  const { customers, customerGroups, orders, business, user, addCustomer, updateCustomer, deleteCustomer, setView } = useStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Customer | null>(null)
   const [showUpgrade, setShowUpgrade] = useState(false)
@@ -33,6 +35,18 @@ export default function Customers() {
 
   async function handleDelete(id: string) {
     if (confirm('¿Eliminar este cliente?')) await deleteCustomer(id)
+  }
+
+  function debtOf(customerId: string): number {
+    return orders
+      .filter(o => o.customerId === customerId && o.paid === false)
+      .reduce((s, o) => s + orderTotal(o), 0)
+  }
+
+  function sendReminder(c: Customer, debt: number) {
+    const msg = `Hola ${c.name}! 😊 Te escribo de ${business?.name ?? 'mi emprendimiento'}. Te recuerdo que tenés un saldo pendiente de ${formatCurrency(debt)}. ¿Coordinamos el pago? ¡Gracias!`
+    trackEvent('debt_reminder_sent')
+    openWhatsApp(c.phone, msg)
   }
 
   return (
@@ -73,6 +87,7 @@ export default function Customers() {
 
         {filtered.map(c => {
           const group = customerGroups.find(g => g.id === c.groupId)
+          const debt = debtOf(c.id)
           return (
             <div key={c.id} className="bg-surface rounded-2xl p-4 shadow-sm flex items-center gap-3">
               <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-bold text-white text-sm"
@@ -96,6 +111,15 @@ export default function Customers() {
                   </p>
                 )}
                 {c.notes && <p className="text-xs text-ink-soft truncate">{c.notes}</p>}
+                {debt > 0 && (
+                  <button
+                    onClick={() => c.phone ? sendReminder(c, debt) : undefined}
+                    className="flex items-center gap-1 mt-1 text-xs font-semibold text-rose-600"
+                  >
+                    <HandCoins size={13} />
+                    Debe {formatCurrency(debt)}{c.phone ? ' · Recordar por WA' : ''}
+                  </button>
+                )}
               </div>
               <div className="flex gap-1 shrink-0">
                 {c.phone && (

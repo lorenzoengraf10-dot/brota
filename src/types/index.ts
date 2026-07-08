@@ -19,6 +19,10 @@ export interface Business {
   id: string
   name: string
   currency: string
+  // Catálogo público: link brotaonline.com/tienda/<slug>; null = no activado
+  slug?: string | null
+  // WhatsApp del negocio para el botón "Pedir" del catálogo
+  whatsapp?: string
   createdAt: string
 }
 
@@ -73,6 +77,8 @@ export interface Order {
   date: string
   note: string
   paymentMethod: PaymentMethod
+  // false = fiado (pago pendiente); undefined en filas viejas = pagado
+  paid?: boolean
   createdAt: string
 }
 

@@ -1,7 +1,9 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { Sprout, Settings } from 'lucide-react'
+import { Sprout, Settings, Bell } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import BottomNav from './BottomNav'
+import NotificationsSheet from './NotificationsSheet'
+import { dueState } from '@/lib/delivery'
 import FeedbackModal from '@/components/marketing/FeedbackModal'
 import ProEntryModal from '@/components/marketing/ProEntryModal'
 import InstallPrompt from '@/components/marketing/InstallPrompt'
@@ -22,6 +24,7 @@ const INSTALL_KEY = 'brota-install'
 const FEEDBACK_KEY = 'brota-feedback-asked'
 const PRO_LAST_KEY = 'brota-pro-last-shown'
 const PRO_SNOOZE_KEY = 'brota-pro-snoozed'
+const DELIVERY_NOTIF_KEY = 'brota-delivery-notif'
 const DAY = 86400000
 // El modal Pro aparece cada 2 días; "No volver a mostrar" lo silencia 12 días
 const PRO_EVERY_DAYS = 2
@@ -50,10 +53,38 @@ function CurrentView({ view }: { view: string }) {
 }
 
 export default function AppLayout() {
-  const { currentView, setView, notifications, user } = useStore()
+  const { currentView, setView, notifications, user, orders, addNotification } = useStore()
   const unread = notifications.filter((n) => !n.read).length
   const [showPro, setShowPro] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+
+  // Recordatorio de entregas: una notificación por día al abrir la app
+  useEffect(() => {
+    if (orders.length === 0) return
+    const todayKey = today()
+    if (localStorage.getItem(DELIVERY_NOTIF_KEY) === todayKey) return
+
+    const dueToday = orders.filter((o) => o.status !== 'completed' && dueState(o.dueDate) === 'today')
+    const overdue = orders.filter((o) => o.status !== 'completed' && dueState(o.dueDate) === 'overdue')
+    if (dueToday.length === 0 && overdue.length === 0) return
+
+    localStorage.setItem(DELIVERY_NOTIF_KEY, todayKey)
+    if (dueToday.length > 0) {
+      addNotification({
+        title: `Hoy entregás ${dueToday.length} pedido${dueToday.length !== 1 ? 's' : ''}`,
+        message: dueToday.map((o) => o.customerName || 'Cliente ocasional').join(', '),
+        type: 'warning',
+      })
+    }
+    if (overdue.length > 0) {
+      addNotification({
+        title: `${overdue.length} entrega${overdue.length !== 1 ? 's' : ''} vencida${overdue.length !== 1 ? 's' : ''}`,
+        message: overdue.map((o) => o.customerName || 'Cliente ocasional').join(', '),
+        type: 'error',
+      })
+    }
+  }, [orders])
 
   useEffect(() => {
     if (!user) return
@@ -113,15 +144,25 @@ export default function AppLayout() {
           </span>
           <span className="font-bold text-ink text-[17px] tracking-tight">Brota</span>
         </button>
-        <button
-          onClick={() => setView('settings')}
-          className="relative p-2 rounded-full hover:bg-black/5 transition-colors"
-        >
-          <Settings size={20} className="text-ink-soft" strokeWidth={1.75} />
-          {unread > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-600" />
-          )}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowNotifications(true)}
+            className="relative p-2 rounded-full hover:bg-black/5 transition-colors"
+          >
+            <Bell size={20} className="text-ink-soft" strokeWidth={1.75} />
+            {unread > 0 && (
+              <span className="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setView('settings')}
+            className="p-2 rounded-full hover:bg-black/5 transition-colors"
+          >
+            <Settings size={20} className="text-ink-soft" strokeWidth={1.75} />
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 overflow-y-auto min-h-0">
@@ -133,6 +174,7 @@ export default function AppLayout() {
       <InstallPrompt />
       <BottomNav />
 
+      <NotificationsSheet open={showNotifications} onClose={() => setShowNotifications(false)} />
       <FeedbackModal open={showFeedback} onClose={handleFeedbackClose} />
       <ProEntryModal open={showPro} onClose={() => setShowPro(false)} onSnooze={handleProSnooze} />
     </div>

@@ -4,6 +4,7 @@ import { initGA } from '@/lib/gaTracking'
 import CookieBanner from '@/components/marketing/CookieBanner'
 
 const Landing = lazy(() => import('@/components/marketing/Landing'))
+const PublicCatalog = lazy(() => import('@/views/PublicCatalog'))
 const AuthScreen = lazy(() => import('@/components/auth/AuthScreen'))
 const Onboarding = lazy(() => import('@/components/onboarding/Onboarding'))
 const AppLayout = lazy(() => import('@/components/layout/AppLayout'))
@@ -18,17 +19,26 @@ function Spinner() {
   )
 }
 
+// Catálogo público: no requiere sesión ni inicializa el store
+const catalogSlug = window.location.pathname.startsWith('/tienda/')
+  ? decodeURIComponent(window.location.pathname.slice('/tienda/'.length)).replace(/\/+$/, '')
+  : null
+
 export default function App() {
   const { user, loadingAuth, onboardingDone, currentView, landingSeen, cookieConsent, initialize } =
     useStore()
 
-  useEffect(() => { initialize() }, [])
+  useEffect(() => {
+    if (!catalogSlug) initialize()
+  }, [])
 
   useEffect(() => {
     if (cookieConsent === true) initGA()
   }, [cookieConsent])
 
   function content() {
+    if (catalogSlug) return <PublicCatalog slug={catalogSlug} />
+
     if (loadingAuth) return <Spinner />
 
     if (currentView === 'privacy') return <PrivacyModal />
@@ -48,7 +58,7 @@ export default function App() {
   return (
     <>
       <Suspense fallback={<Spinner />}>{content()}</Suspense>
-      <CookieBanner />
+      {!catalogSlug && <CookieBanner />}
     </>
   )
 }

@@ -1,8 +1,9 @@
 import { useStore } from '@/store/useStore'
-import { formatCurrency, formatDate, today } from '@/lib/format'
+import { formatCurrency, formatDate, formatShortDate, today, isoWeekStart } from '@/lib/format'
 import { orderTotal } from '@/lib/receipt'
 import { dueState, dueLabel, dueBadgeClass } from '@/lib/delivery'
-import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package, Users, Receipt, BarChart2, ChevronRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package, Users, Receipt, BarChart2, ChevronRight, Truck, HandCoins } from 'lucide-react'
+import { BarChart, Bar, XAxis, ResponsiveContainer } from 'recharts'
 import ShareCard from '@/components/marketing/ShareCard'
 import type { ReactNode } from 'react'
 
@@ -61,6 +62,23 @@ export default function Dashboard() {
   const activeOrders = orders.filter(o => o.status !== 'completed')
   const recent = orders.slice(0, 5)
 
+  const deliveriesToday = orders.filter(o => o.dueDate === today() && o.status !== 'completed')
+  const totalDebt = orders.filter(o => o.paid === false).reduce((s, o) => s + orderTotal(o), 0)
+
+  // Ventas completadas por semana, últimas 6 semanas
+  const weeks = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - (5 - i) * 7)
+    return isoWeekStart(d)
+  })
+  const weeklySales = weeks.map(ws => ({
+    week: formatShortDate(ws),
+    total: orders
+      .filter(o => o.status === 'completed' && isoWeekStart(new Date(o.date + 'T12:00:00')) === ws)
+      .reduce((s, o) => s + orderTotal(o), 0),
+  }))
+  const hasChartData = weeklySales.some(w => w.total > 0)
+
   return (
     <div className="p-4 space-y-5 pb-24">
       <section>
@@ -78,12 +96,55 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {deliveriesToday.length > 0 && (
+        <button
+          onClick={() => setView('orders')}
+          className="w-full flex items-center gap-3 bg-amber-100 dark:bg-amber-500/15 rounded-2xl p-3.5 text-left"
+        >
+          <span className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center shrink-0">
+            <Truck size={17} color="white" />
+          </span>
+          <p className="flex-1 text-sm font-semibold text-amber-800 dark:text-amber-300">
+            Hoy entregás {deliveriesToday.length} pedido{deliveriesToday.length !== 1 ? 's' : ''}
+          </p>
+          <ChevronRight size={16} className="text-amber-700 dark:text-amber-300 shrink-0" />
+        </button>
+      )}
+
+      {totalDebt > 0 && (
+        <button
+          onClick={() => setView('customers')}
+          className="w-full flex items-center gap-3 bg-rose-100 dark:bg-rose-500/15 rounded-2xl p-3.5 text-left"
+        >
+          <span className="w-9 h-9 rounded-xl bg-rose-500 flex items-center justify-center shrink-0">
+            <HandCoins size={17} color="white" />
+          </span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-rose-800 dark:text-rose-300">Por cobrar: {formatCurrency(totalDebt)}</p>
+            <p className="text-xs text-rose-700/70 dark:text-rose-300/70">Tocá para ver quién te debe</p>
+          </div>
+          <ChevronRight size={16} className="text-rose-700 dark:text-rose-300 shrink-0" />
+        </button>
+      )}
+
       <section className="grid grid-cols-2 gap-3">
         <NavCard onClick={() => setView('orders')} icon={<ShoppingBag size={18} color="white" />} bg="bg-brand-600" count={activeOrders.length} label="Pedidos activos" />
         <NavCard onClick={() => setView('products')} icon={<Package size={18} color="white" />} bg="bg-azure-600" count={products.length} label="Productos" />
         <NavCard onClick={() => setView('customers')} icon={<Users size={18} color="white" />} bg="bg-purple-500" count={customers.length} label="Clientes" />
         <NavCard onClick={() => setView('expenses')} icon={<Receipt size={18} color="white" />} bg="bg-red-500" count={expenses.filter(e => e.date.startsWith(thisMonth)).length} label="Gastos del mes" />
       </section>
+
+      {hasChartData && (
+        <section className="bg-surface rounded-2xl p-4 shadow-sm">
+          <h2 className="text-xs font-semibold text-ink-soft uppercase tracking-wide mb-3">Ventas por semana</h2>
+          <ResponsiveContainer width="100%" height={130}>
+            <BarChart data={weeklySales} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+              <XAxis dataKey="week" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: 'var(--color-ink-soft)' }} />
+              <Bar dataKey="total" fill="var(--color-brand-600)" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </section>
+      )}
 
       <button
         onClick={() => setView('social')}

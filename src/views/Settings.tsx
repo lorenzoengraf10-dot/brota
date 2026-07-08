@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Sun, Moon, Monitor, Download, LogOut, Pencil, Check, X, Lock } from 'lucide-react'
+import { Sun, Moon, Monitor, Download, LogOut, Pencil, Check, X, Lock, Store, Copy, Plus, ChevronRight } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import { today } from '@/lib/format'
-import { FREE_LIMITS, PRO_PRICE, canExport, waSupportLink, waDeleteLink } from '@/lib/plan'
+import { today, slugify } from '@/lib/format'
+import { FREE_LIMITS, PRO_PRICE, APP_URL, canExport, canAddBusiness, waSupportLink, waDeleteLink } from '@/lib/plan'
+import { trackEvent } from '@/lib/gaTracking'
 import { exportOrders, exportExpenses, exportProducts, exportCustomers } from '@/lib/export'
 import UpgradeModal from '@/components/plan/UpgradeModal'
 import ShareCard from '@/components/marketing/ShareCard'
@@ -15,12 +16,50 @@ const DARK_OPTIONS: { id: 'light' | 'dark' | 'system'; label: string; icon: type
 
 export default function Settings() {
   const {
-    user, business, products, customers, orders, expenses,
-    darkMode, setDarkMode, updateBusiness, signOut,
+    user, business, businesses, products, customers, orders, expenses,
+    darkMode, setDarkMode, updateBusiness, addBusiness, switchBusiness, signOut,
   } = useStore()
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(business?.name ?? '')
+  const [waInput, setWaInput] = useState(business?.whatsapp ?? '')
+  const [addingBiz, setAddingBiz] = useState(false)
+  const [newBizName, setNewBizName] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const catalogUrl = business?.slug ? `${APP_URL}/tienda/${business.slug}` : null
+
+  async function activateCatalog() {
+    if (!business) return
+    const slug = `${slugify(business.name) || 'mi-negocio'}-${business.id.slice(0, 4)}`
+    await updateBusiness(business.id, { slug })
+    trackEvent('catalog_activated')
+  }
+
+  async function saveWhatsapp() {
+    if (!business) return
+    await updateBusiness(business.id, { whatsapp: waInput.replace(/\D/g, '') })
+  }
+
+  function copyCatalogLink() {
+    if (!catalogUrl) return
+    navigator.clipboard.writeText(catalogUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+    trackEvent('catalog_link_copied')
+  }
+
+  async function handleAddBusiness() {
+    if (!canAddBusiness(user?.plan ?? 'free', businesses.length)) {
+      setShowUpgrade(true)
+      return
+    }
+    if (!newBizName.trim()) return
+    await addBusiness(newBizName.trim())
+    trackEvent('business_created')
+    setNewBizName('')
+    setAddingBiz(false)
+  }
 
   const month = today().slice(0, 7)
   const ordersThisMonth = orders.filter((o) => o.date.startsWith(month)).length
@@ -114,9 +153,118 @@ export default function Settings() {
                 <p className="text-xs text-ink-soft mb-0.5">Nombre del emprendimiento</p>
                 <p className="font-semibold text-ink">{business?.name}</p>
               </div>
-              <button onClick={() => setEditingName(true)} className="p-2 rounded-xl bg-black/5 text-ink-soft">
+              <button onClick={() => { setNameInput(business?.name ?? ''); setEditingName(true) }} className="p-2 rounded-xl bg-black/5 text-ink-soft">
                 <Pencil size={16} />
               </button>
+            </div>
+          )}
+        </div>
+
+        {/* Mis emprendimientos */}
+        <div className="bg-surface rounded-2xl p-2 shadow-sm mt-2 divide-y divide-black/5">
+          {businesses.map((b) => (
+            <button
+              key={b.id}
+              onClick={() => b.id !== business?.id && switchBusiness(b.id)}
+              className="w-full flex items-center justify-between p-3 text-left"
+            >
+              <span className={`text-sm font-medium ${b.id === business?.id ? 'text-brand-600' : 'text-ink'}`}>
+                {b.name}
+              </span>
+              {b.id === business?.id ? (
+                <span className="text-[10px] font-bold text-brand-600 bg-brand-600/10 px-2 py-1 rounded-full">ACTIVO</span>
+              ) : (
+                <ChevronRight size={15} className="text-ink-soft" />
+              )}
+            </button>
+          ))}
+          {addingBiz ? (
+            <div className="flex items-center gap-2 p-3">
+              <input
+                type="text" value={newBizName} onChange={(e) => setNewBizName(e.target.value)}
+                placeholder="Nombre del nuevo emprendimiento" autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleAddBusiness()}
+                className="flex-1 bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink placeholder:text-ink-soft"
+              />
+              <button onClick={handleAddBusiness} className="p-2 rounded-xl bg-brand-600 text-white">
+                <Check size={16} />
+              </button>
+              <button onClick={() => setAddingBiz(false)} className="p-2 rounded-xl bg-black/5 text-ink-soft">
+                <X size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                if (!canAddBusiness(user?.plan ?? 'free', businesses.length)) { setShowUpgrade(true); return }
+                setAddingBiz(true)
+              }}
+              className="w-full flex items-center justify-between p-3 text-left"
+            >
+              <span className="flex items-center gap-2 text-sm font-medium text-brand-600">
+                <Plus size={15} /> Nuevo emprendimiento
+              </span>
+              {!canAddBusiness(user?.plan ?? 'free', businesses.length) && (
+                <span className="flex items-center gap-1 text-[10px] font-bold text-brand-600 bg-brand-600/10 px-2 py-1 rounded-full">
+                  <Lock size={10} /> PRO
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-xs font-semibold text-ink-soft uppercase tracking-wide mb-2">Catálogo online</h2>
+        <div className="bg-surface rounded-2xl p-4 shadow-sm space-y-3">
+          {catalogUrl ? (
+            <>
+              <div>
+                <p className="text-xs text-ink-soft mb-1">Tu catálogo público</p>
+                <div className="flex items-center gap-2">
+                  <a href={catalogUrl} target="_blank" rel="noreferrer" className="flex-1 text-sm text-brand-600 font-medium truncate underline">
+                    {catalogUrl.replace('https://', '')}
+                  </a>
+                  <button onClick={copyCatalogLink} className="flex items-center gap-1 text-xs font-semibold bg-black/5 dark:bg-white/10 text-ink px-2.5 py-1.5 rounded-xl shrink-0">
+                    {copied ? <Check size={13} className="text-brand-600" /> : <Copy size={13} />}
+                    {copied ? 'Copiado' : 'Copiar'}
+                  </button>
+                </div>
+                <p className="text-[11px] text-ink-soft mt-1.5">
+                  Compartilo en tu bio de Instagram o por WhatsApp: tus clientes ven los productos y te piden directo.
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-ink-soft mb-1">WhatsApp para recibir pedidos</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="tel" placeholder="5491100000000" value={waInput}
+                    onChange={(e) => setWaInput(e.target.value)}
+                    className="flex-1 bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink placeholder:text-ink-soft"
+                  />
+                  <button onClick={saveWhatsapp} className="p-2 rounded-xl bg-brand-600 text-white shrink-0">
+                    <Check size={16} />
+                  </button>
+                </div>
+                {!business?.whatsapp && (
+                  <p className="text-[11px] text-amber-600 mt-1.5">Sin número, el botón "Pedir" no aparece en tu catálogo.</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex items-start gap-3">
+              <span className="w-10 h-10 rounded-xl bg-brand-600/10 flex items-center justify-center shrink-0">
+                <Store size={18} className="text-brand-600" />
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-ink">Mostrá tus productos online</p>
+                <p className="text-xs text-ink-soft mt-0.5 mb-3">
+                  Un link con tu catálogo para compartir en redes. Tus clientes piden por WhatsApp.
+                </p>
+                <button onClick={activateCatalog} className="bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-xl">
+                  Activar mi catálogo
+                </button>
+              </div>
             </div>
           )}
         </div>

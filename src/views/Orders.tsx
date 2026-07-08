@@ -32,7 +32,7 @@ const PAYMENT_LABEL: Record<PaymentMethod, string> = {
   transferencia: 'Transferencia',
 }
 
-type Filter = 'all' | OrderStatus
+type Filter = 'all' | OrderStatus | 'fiado'
 
 function emptyDraft(businessId: string): Omit<Order, 'id' | 'createdAt'> {
   return {
@@ -47,6 +47,7 @@ function emptyDraft(businessId: string): Omit<Order, 'id' | 'createdAt'> {
     date: today(),
     note: '',
     paymentMethod: 'efectivo',
+    paid: true,
   }
 }
 
@@ -58,7 +59,10 @@ export default function Orders() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showUpgrade, setShowUpgrade] = useState(false)
 
-  const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter)
+  const filtered =
+    filter === 'all' ? orders :
+    filter === 'fiado' ? orders.filter(o => o.paid === false) :
+    orders.filter(o => o.status === filter)
   const thisMonth = orders.filter(o => o.date.startsWith(today().slice(0, 7))).length
   const atLimit = isAtLimit(user?.plan ?? 'free', 'ordersPerMonth', thisMonth)
 
@@ -88,7 +92,7 @@ export default function Orders() {
     <div className="pb-24">
       {/* Filter tabs */}
       <div className="flex gap-2 px-4 py-3 overflow-x-auto [scrollbar-width:none] sticky top-0 bg-cream z-10">
-        {(['all', 'pending', 'ready', 'completed'] as const).map(s => (
+        {(['all', 'pending', 'ready', 'completed', 'fiado'] as const).map(s => (
           <button
             key={s}
             onClick={() => setFilter(s)}
@@ -96,7 +100,7 @@ export default function Orders() {
               filter === s ? 'bg-brand-600 text-white' : 'bg-surface text-ink-soft border border-black/10'
             }`}
           >
-            {s === 'all' ? 'Todos' : STATUS_LABEL[s]}
+            {s === 'all' ? 'Todos' : s === 'fiado' ? 'Fiado' : STATUS_LABEL[s]}
           </button>
         ))}
       </div>
@@ -131,6 +135,11 @@ export default function Orders() {
                     {order.dueDate && ds !== 'none' && (
                       <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${dueBadgeClass(ds)}`}>
                         {dueLabel(order.dueDate)}
+                      </span>
+                    )}
+                    {order.paid === false && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-rose-100 text-rose-700">
+                        Fiado
                       </span>
                     )}
                   </div>
@@ -171,6 +180,14 @@ export default function Orders() {
                   )}
 
                   <div className="flex gap-2 flex-wrap">
+                    {order.paid === false && (
+                      <button
+                        onClick={() => updateOrder(order.id, { paid: true })}
+                        className="flex-1 bg-emerald-600 text-white text-sm font-medium py-2 px-3 rounded-xl"
+                      >
+                        ✓ Marcar pagado
+                      </button>
+                    )}
                     {next && (
                       <button
                         onClick={() => handleAdvance(order)}
@@ -240,7 +257,7 @@ function OrderForm({
   const { products, customers } = useStore()
   const [form, setForm] = useState<Omit<Order, 'id' | 'createdAt'>>(() =>
     initial
-      ? { businessId: initial.businessId, customerId: initial.customerId, customerName: initial.customerName, items: [...initial.items], discount: initial.discount, discountType: initial.discountType, status: initial.status, dueDate: initial.dueDate, date: initial.date, note: initial.note, paymentMethod: initial.paymentMethod }
+      ? { businessId: initial.businessId, customerId: initial.customerId, customerName: initial.customerName, items: [...initial.items], discount: initial.discount, discountType: initial.discountType, status: initial.status, dueDate: initial.dueDate, date: initial.date, note: initial.note, paymentMethod: initial.paymentMethod, paid: initial.paid !== false }
       : emptyDraft(businessId)
   )
   const [saving, setSaving] = useState(false)
@@ -396,6 +413,21 @@ function OrderForm({
                   {PAYMENT_LABEL[m]}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Paid / fiado */}
+          <div>
+            <label className="text-xs font-semibold text-ink-soft uppercase tracking-wide block mb-2">¿Está pagado?</label>
+            <div className="flex gap-2">
+              <button onClick={() => setForm(f => ({ ...f, paid: true }))}
+                className={`flex-1 py-2 rounded-xl text-xs font-medium transition-colors ${ form.paid !== false ? 'bg-emerald-600 text-white' : 'bg-black/5 text-ink-soft' }`}>
+                Pagado
+              </button>
+              <button onClick={() => setForm(f => ({ ...f, paid: false }))}
+                className={`flex-1 py-2 rounded-xl text-xs font-medium transition-colors ${ form.paid === false ? 'bg-rose-500 text-white' : 'bg-black/5 text-ink-soft' }`}>
+                Fiado (debe)
+              </button>
             </div>
           </div>
 

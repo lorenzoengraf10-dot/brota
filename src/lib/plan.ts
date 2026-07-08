@@ -56,6 +56,11 @@ export function canUseSocialMedia(plan: Plan): boolean {
   return plan === 'pro'
 }
 
+// Free: 1 emprendimiento. Pro: ilimitados.
+export function canAddBusiness(plan: Plan, count: number): boolean {
+  return plan === 'pro' || count < 1
+}
+
 export function canExport(plan: Plan): boolean {
   return plan === 'pro'
 }

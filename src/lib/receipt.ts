@@ -41,7 +41,7 @@ export function buildReceipt(order: Order, businessName: string): string {
     lines.push(`🏷️ Descuento: ${discountText}`)
   }
   lines.push(`💰 *Total: ${formatCurrency(orderTotal(order))}*`)
-  lines.push(`💳 Pago: ${order.paymentMethod}`)
+  lines.push(`💳 Pago: ${order.paymentMethod}${order.paid === false ? ' (pendiente)' : ''}`)
   if (order.note) lines.push(`📝 ${order.note}`)
   return lines.join('\n')
 }

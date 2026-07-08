@@ -1,5 +1,5 @@
 import type { Order, Expense, Product, Customer } from '@/types'
-import { formatDate, formatCurrency } from './format'
+import { formatDate, formatCurrency, today } from './format'
 import { orderTotal } from './receipt'
 
 function esc(v: string | number | undefined): string {
@@ -23,13 +23,13 @@ function dl(filename: string, content: string) {
   URL.revokeObjectURL(url)
 }
 
-const todayStr = () => new Date().toISOString().slice(0, 10)
+const todayStr = today
 
 export function exportOrders(orders: Order[]) {
   dl(
     `brota-ventas-${todayStr()}.csv`,
     toCSV(
-      ['Fecha', 'Cliente', 'Productos', 'Descuento', 'Total', 'Pago', 'Estado', 'Entrega', 'Nota'],
+      ['Fecha', 'Cliente', 'Productos', 'Descuento', 'Total', 'Pago', 'Pagado', 'Estado', 'Entrega', 'Nota'],
       orders.map((o) => [
         formatDate(o.date),
         o.customerName || 'Cliente ocasional',
@@ -39,6 +39,7 @@ export function exportOrders(orders: Order[]) {
           : '',
         orderTotal(o),
         o.paymentMethod,
+        o.paid === false ? 'No (fiado)' : 'Sí',
         o.status === 'pending' ? 'Pendiente' : o.status === 'ready' ? 'Listo' : 'Completado',
         o.dueDate ? formatDate(o.dueDate) : '',
         o.note,
