@@ -30,20 +30,14 @@ export default function PublicCatalog({ slug }: { slug: string }) {
 
   useEffect(() => {
     async function load() {
-      const { data: biz } = await supabase
-        .from('catalog_businesses')
-        .select('*')
-        .eq('slug', slug)
-        .single()
+      // RPC por slug exacto: el catálogo no permite listar negocios ajenos
+      const { data: bizRows } = await supabase.rpc('catalog_business', { p_slug: slug })
+      const biz = Array.isArray(bizRows) ? bizRows[0] : bizRows
       if (!biz) { setState('notfound'); return }
       const b = biz as Record<string, string>
       setBusiness({ id: b.id, name: b.name, slug: b.slug, whatsapp: b.whatsapp ?? '', currency: b.currency })
 
-      const { data: prods } = await supabase
-        .from('catalog_products')
-        .select('*')
-        .eq('business_id', b.id)
-        .order('name')
+      const { data: prods } = await supabase.rpc('catalog_products', { p_slug: slug })
       setProducts(
         ((prods ?? []) as Record<string, unknown>[]).map((p) => ({
           id: p.id as string,
