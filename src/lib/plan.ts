@@ -19,11 +19,10 @@ export function waShareLink(): string {
 }
 
 export const PRO_FEATURES = [
-  'Emprendimientos ilimitados',
   'Productos, clientes, ventas y gastos ilimitados',
-  'Exportar ventas, clientes y gastos a CSV/Excel',
+  'Emprendimientos ilimitados',
   'Sección Redes Sociales con métricas semanales',
-  'Sincronización en la nube en todos los dispositivos',
+  'Exportar todo a CSV/Excel',
 ]
 
 export function waProLink(email?: string): string {
