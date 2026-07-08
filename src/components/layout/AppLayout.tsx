@@ -20,6 +20,12 @@ const SettingsView = lazy(() => import('@/views/Settings'))
 
 const INSTALL_KEY = 'brota-install'
 const FEEDBACK_KEY = 'brota-feedback-asked'
+const PRO_LAST_KEY = 'brota-pro-last-shown'
+const PRO_SNOOZE_KEY = 'brota-pro-snoozed'
+const DAY = 86400000
+// El modal Pro aparece cada 2 días; "No volver a mostrar" lo silencia 12 días
+const PRO_EVERY_DAYS = 2
+const PRO_SNOOZE_DAYS = 12
 
 function ViewLoader() {
   return (
@@ -59,21 +65,32 @@ export default function AppLayout() {
     // Check if weekly feedback is due
     const lastFeedback = localStorage.getItem(FEEDBACK_KEY)
     const refDate = lastFeedback ?? install
-    const days = Math.floor((Date.now() - new Date(refDate).getTime()) / 86400000)
+    const days = Math.floor((Date.now() - new Date(refDate).getTime()) / DAY)
     const feedbackDue = days >= 7
+
+    const lastPro = Number(localStorage.getItem(PRO_LAST_KEY) ?? 0)
+    const snoozedAt = Number(localStorage.getItem(PRO_SNOOZE_KEY) ?? 0)
+    const proSnoozed = Date.now() - snoozedAt < PRO_SNOOZE_DAYS * DAY
+    const proDue = Date.now() - lastPro >= PRO_EVERY_DAYS * DAY
 
     const t = setTimeout(() => {
       if (feedbackDue) {
         setShowFeedback(true)
         trackEvent('feedback_prompt_shown')
-      } else if (user.plan !== 'pro') {
+      } else if (user.plan !== 'pro' && proDue && !proSnoozed) {
         setShowPro(true)
+        localStorage.setItem(PRO_LAST_KEY, String(Date.now()))
         trackEvent('pro_entry_shown')
       }
     }, 1500)
 
     return () => clearTimeout(t)
   }, [user?.id])
+
+  function handleProSnooze() {
+    localStorage.setItem(PRO_SNOOZE_KEY, String(Date.now()))
+    setShowPro(false)
+  }
 
   useEffect(() => {
     trackPageView(currentView)
@@ -117,7 +134,7 @@ export default function AppLayout() {
       <BottomNav />
 
       <FeedbackModal open={showFeedback} onClose={handleFeedbackClose} />
-      <ProEntryModal open={showPro} onClose={() => setShowPro(false)} />
+      <ProEntryModal open={showPro} onClose={() => setShowPro(false)} onSnooze={handleProSnooze} />
     </div>
   )
 }

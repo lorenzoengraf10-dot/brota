@@ -6,9 +6,10 @@ import { trackEvent } from '@/lib/gaTracking'
 interface Props {
   open: boolean
   onClose: () => void
+  onSnooze: () => void
 }
 
-export default function ProEntryModal({ open, onClose }: Props) {
+export default function ProEntryModal({ open, onClose, onSnooze }: Props) {
   const { user } = useStore()
   if (!open) return null
 
@@ -55,6 +56,12 @@ export default function ProEntryModal({ open, onClose }: Props) {
           className="w-full text-sm text-ink-soft py-2 font-medium"
         >
           Ahora no
+        </button>
+        <button
+          onClick={() => { trackEvent('pro_entry_snoozed'); onSnooze() }}
+          className="w-full text-xs text-ink-soft/70 py-1.5"
+        >
+          No volver a mostrar
         </button>
       </div>
     </div>
