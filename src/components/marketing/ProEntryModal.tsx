@@ -1,6 +1,7 @@
 import { X, Check } from 'lucide-react'
 import { PRO_PRICE, PRO_FEATURES, waProLink } from '@/lib/plan'
 import { useStore } from '@/store/useStore'
+import { trackEvent } from '@/lib/gaTracking'
 
 interface Props {
   open: boolean
@@ -40,6 +41,7 @@ export default function ProEntryModal({ open, onClose }: Props) {
           href={waProLink(user?.email)}
           target="_blank"
           rel="noreferrer"
+          onClick={() => trackEvent('upgrade_wa_click', { source: 'pro_entry' })}
           className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#25D366] text-white font-semibold rounded-2xl text-sm mb-2"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">

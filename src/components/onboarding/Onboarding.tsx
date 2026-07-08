@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Sprout, ArrowRight, Check } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import { supabase } from '@/lib/supabase'
+import { trackEvent } from '@/lib/gaTracking'
 
 const CURRENCIES = [
   { value: 'ARS', label: 'Peso argentino', symbol: '$' },
@@ -9,7 +9,7 @@ const CURRENCIES = [
 ]
 
 export default function Onboarding() {
-  const { business, completeOnboarding, setView } = useStore()
+  const { business, updateBusiness, completeOnboarding, setView } = useStore()
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
   const [currency, setCurrency] = useState('ARS')
@@ -18,10 +18,8 @@ export default function Onboarding() {
   const finish = async () => {
     if (!business) return
     setSaving(true)
-    await supabase
-      .from('businesses')
-      .update({ name: name.trim() || 'Mi emprendimiento', currency })
-      .eq('id', business.id)
+    await updateBusiness(business.id, { name: name.trim() || 'Mi emprendimiento', currency })
+    trackEvent('onboarding_complete')
     completeOnboarding()
     setView('dashboard')
   }
@@ -29,7 +27,7 @@ export default function Onboarding() {
   const steps = [
     {
       title: '¿Cómo se llama tu emprendimiento?',
-      subtitle: 'Pods cambiarlo más adelante desde Configuración.',
+      subtitle: 'Podés cambiarlo más adelante desde Configuración.',
       content: (
         <input
           type="text"
@@ -44,7 +42,7 @@ export default function Onboarding() {
       ),
     },
     {
-      title: '¿Con qué moneda trabás?',
+      title: '¿Con qué moneda trabajás?',
       subtitle: 'Todas las ventas y gastos se mostrarán en esta moneda.',
       content: (
         <div className="space-y-2">

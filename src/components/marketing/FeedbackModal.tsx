@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { X, Star } from 'lucide-react'
 import { WA_NUMBER } from '@/lib/plan'
+import { trackEvent } from '@/lib/gaTracking'
 
 interface Props {
   open: boolean
@@ -17,6 +18,7 @@ export default function FeedbackModal({ open, onClose }: Props) {
   function handleSend() {
     const starsText = '⭐'.repeat(stars)
     const msg = `🌱 Feedback de Brota\n${starsText}\n\n${comment.trim() || '(sin comentario)'}`
+    trackEvent('feedback_sent', { stars })
     window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank')
     onClose()
   }

@@ -34,11 +34,13 @@ export default function AuthScreen() {
       password,
     })
     if (signInErr) {
-      const { error: signUpErr } = await supabase.auth.signUp({
+      const { data, error: signUpErr } = await supabase.auth.signUp({
         email: email.trim(),
         password,
       })
       if (signUpErr) setError(signUpErr.message)
+      // Cuenta creada pero requiere confirmación por email
+      else if (data.user && !data.session) setSent(true)
     }
     setLoading(false)
   }
@@ -51,7 +53,7 @@ export default function AuthScreen() {
         </div>
         <h1 className="text-xl font-bold text-ink mb-2">Revisá tu email</h1>
         <p className="text-ink-soft text-sm max-w-xs">
-          Te enviamos un link mágico a <strong>{email}</strong>. Tapá el link para entrar.
+          Te enviamos un link a <strong>{email}</strong>. Tocá el link para entrar.
         </p>
         <button
           onClick={() => setSent(false)}

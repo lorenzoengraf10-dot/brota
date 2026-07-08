@@ -3,6 +3,7 @@ import { Plus, X, Trash2, Package } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { formatCurrency } from '@/lib/format'
 import { isAtLimit, FREE_LIMITS } from '@/lib/plan'
+import { trackEvent } from '@/lib/gaTracking'
 import UpgradeModal from '@/components/plan/UpgradeModal'
 import type { Product } from '@/types'
 
@@ -112,7 +113,7 @@ export default function Products() {
           onClose={() => setShowForm(false)}
           onSave={async data => {
             if (editing) await updateProduct(editing.id, data)
-            else await addProduct(data as Omit<Product, 'id' | 'createdAt'>)
+            else { await addProduct(data as Omit<Product, 'id' | 'createdAt'>); trackEvent('product_created') }
             setShowForm(false)
           }}
         />

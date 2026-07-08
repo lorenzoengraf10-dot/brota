@@ -18,7 +18,7 @@ export default function PrivacyModal() {
         <h3>2. Cómo usamos tus datos</h3>
         <p>Tus datos se almacenan en Supabase (infraestructura en la nube) y se usan exclusivamente para mostrarte tu propia información dentro de la app.</p>
         <h3>3. Cookies</h3>
-        <p>Usamos Google Analytics 4 para entender el uso general de la app (número de visitas, funciones usadas). Pods rechazar esta opción.</p>
+        <p>Usamos Google Analytics 4 para entender el uso general de la app (número de visitas, funciones usadas). Podés rechazar esta opción.</p>
         <h3>4. Tus derechos</h3>
         <p>Podés solicitar la eliminación de tu cuenta y todos tus datos contactándonos por WhatsApp.</p>
         <h3>5. Contacto</h3>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight, Plus, X, Trash2, CalendarDays } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import { formatShortDate } from '@/lib/format'
+import { formatShortDate, toLocalISO } from '@/lib/format'
 import type { Appointment, AppointmentType, Order } from '@/types'
 
 const TYPE_LABEL: Record<AppointmentType, string> = {
@@ -23,9 +23,7 @@ const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 type DayEvent = { kind: 'appointment'; item: Appointment } | { kind: 'order'; item: Order }
 
-function toISO(d: Date): string {
-  return d.toISOString().slice(0, 10)
-}
+const toISO = toLocalISO
 
 function emptyAppointment(businessId: string, date: string): Omit<Appointment, 'id' | 'createdAt'> {
   return { businessId, title: '', description: '', type: 'cita', date }

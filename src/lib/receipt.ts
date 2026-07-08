@@ -33,7 +33,6 @@ export function buildReceipt(order: Order, businessName: string): string {
     )
   })
   lines.push('')
-  const subtotal = orderSubtotal(order)
   if (order.discount > 0) {
     const discountText =
       order.discountType === 'percent'

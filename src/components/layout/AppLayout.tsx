@@ -4,7 +4,9 @@ import { useStore } from '@/store/useStore'
 import BottomNav from './BottomNav'
 import FeedbackModal from '@/components/marketing/FeedbackModal'
 import ProEntryModal from '@/components/marketing/ProEntryModal'
+import InstallPrompt from '@/components/marketing/InstallPrompt'
 import { today } from '@/lib/format'
+import { trackEvent, trackPageView } from '@/lib/gaTracking'
 
 const Dashboard = lazy(() => import('@/views/Dashboard'))
 const Orders = lazy(() => import('@/views/Orders'))
@@ -63,13 +65,19 @@ export default function AppLayout() {
     const t = setTimeout(() => {
       if (feedbackDue) {
         setShowFeedback(true)
+        trackEvent('feedback_prompt_shown')
       } else if (user.plan !== 'pro') {
         setShowPro(true)
+        trackEvent('pro_entry_shown')
       }
     }, 1500)
 
     return () => clearTimeout(t)
   }, [user?.id])
+
+  useEffect(() => {
+    trackPageView(currentView)
+  }, [currentView])
 
   function handleFeedbackClose() {
     localStorage.setItem(FEEDBACK_KEY, today())
@@ -105,6 +113,7 @@ export default function AppLayout() {
         </Suspense>
       </main>
 
+      <InstallPrompt />
       <BottomNav />
 
       <FeedbackModal open={showFeedback} onClose={handleFeedbackClose} />

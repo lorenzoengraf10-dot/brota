@@ -3,6 +3,7 @@ import { Plus, X, Trash2, Receipt as ReceiptIcon } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { formatCurrency, formatDate, today } from '@/lib/format'
 import { isAtLimit, FREE_LIMITS } from '@/lib/plan'
+import { trackEvent } from '@/lib/gaTracking'
 import UpgradeModal from '@/components/plan/UpgradeModal'
 import type { Expense, ExpenseCategory } from '@/types'
 
@@ -137,7 +138,7 @@ export default function Expenses() {
           onClose={() => setShowForm(false)}
           onSave={async (data) => {
             if (editing) await updateExpense(editing.id, data)
-            else await addExpense(data as Omit<Expense, 'id' | 'createdAt'>)
+            else { await addExpense(data as Omit<Expense, 'id' | 'createdAt'>); trackEvent('expense_created') }
             setShowForm(false)
           }}
         />

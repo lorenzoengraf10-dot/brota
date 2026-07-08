@@ -1,16 +1,23 @@
 import { Sprout, ShoppingBag, Users, CreditCard, BarChart2, Shield } from 'lucide-react'
 import { useStore } from '@/store/useStore'
+import { trackEvent } from '@/lib/gaTracking'
 
 const FEATURES = [
   { icon: ShoppingBag, title: 'Ventas & Pedidos', desc: 'Registrá cada venta, seguí el estado de tus pedidos y avisá por WhatsApp.' },
-  { icon: Users, title: 'Clientes', desc: 'Guardá los datos de tus clientes y agrupaálos como querés.' },
+  { icon: Users, title: 'Clientes', desc: 'Guardá los datos de tus clientes y agrupalos como quieras.' },
   { icon: CreditCard, title: 'Gastos', desc: 'Controlá en qué gastás y calculá la ganancia real de tu negocio.' },
-  { icon: BarChart2, title: 'Redes Sociales', desc: 'Seguimí tus métricas de Instagram, TikTok y Facebook semana a semana.' },
+  { icon: BarChart2, title: 'Redes Sociales', desc: 'Seguí tus métricas de Instagram, TikTok y Facebook semana a semana.' },
   { icon: Shield, title: 'Tus datos, seguros', desc: 'Sincronización en la nube con Supabase. Accedé desde cualquier dispositivo.' },
 ]
 
 export default function Landing() {
-  const { setView } = useStore()
+  const { setView, setLandingSeen } = useStore()
+
+  function start() {
+    trackEvent('landing_cta_click')
+    setLandingSeen()
+    setView('dashboard')
+  }
 
   return (
     <div className="flex flex-col min-h-full bg-cream">
@@ -26,7 +33,7 @@ export default function Landing() {
           La app de gestión para emprendedores argentinos que venden por Instagram, TikTok y WhatsApp.
         </p>
         <button
-          onClick={() => setView('dashboard')}
+          onClick={start}
           className="mt-8 px-8 py-4 bg-brand-600 text-white text-base font-bold rounded-2xl shadow-lg hover:bg-brand-700 transition-colors"
         >
           Empezar gratis

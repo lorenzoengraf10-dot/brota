@@ -1,11 +1,14 @@
 import { useEffect, lazy, Suspense } from 'react'
 import { useStore } from '@/store/useStore'
 import { initGA } from '@/lib/gaTracking'
+import CookieBanner from '@/components/marketing/CookieBanner'
 
 const Landing = lazy(() => import('@/components/marketing/Landing'))
 const AuthScreen = lazy(() => import('@/components/auth/AuthScreen'))
 const Onboarding = lazy(() => import('@/components/onboarding/Onboarding'))
 const AppLayout = lazy(() => import('@/components/layout/AppLayout'))
+const PrivacyModal = lazy(() => import('@/components/legal/PrivacyModal'))
+const TermsModal = lazy(() => import('@/components/legal/TermsModal'))
 
 function Spinner() {
   return (
@@ -16,7 +19,7 @@ function Spinner() {
 }
 
 export default function App() {
-  const { user, loadingAuth, onboardingDone, currentView, cookieConsent, initialize } =
+  const { user, loadingAuth, onboardingDone, currentView, landingSeen, cookieConsent, initialize } =
     useStore()
 
   useEffect(() => { initialize() }, [])
@@ -25,16 +28,27 @@ export default function App() {
     if (cookieConsent === true) initGA()
   }, [cookieConsent])
 
-  if (loadingAuth) return <Spinner />
+  function content() {
+    if (loadingAuth) return <Spinner />
 
-  if (currentView === 'landing')
-    return <Suspense fallback={<Spinner />}><Landing /></Suspense>
+    if (currentView === 'privacy') return <PrivacyModal />
+    if (currentView === 'terms') return <TermsModal />
 
-  if (!user)
-    return <Suspense fallback={<Spinner />}><AuthScreen /></Suspense>
+    if (!user) {
+      // Un visitante nuevo ve la landing; después de "Empezar gratis", el login
+      if (!landingSeen || currentView === 'landing') return <Landing />
+      return <AuthScreen />
+    }
 
-  if (!onboardingDone)
-    return <Suspense fallback={<Spinner />}><Onboarding /></Suspense>
+    if (!onboardingDone) return <Onboarding />
 
-  return <Suspense fallback={<Spinner />}><AppLayout /></Suspense>
+    return <AppLayout />
+  }
+
+  return (
+    <>
+      <Suspense fallback={<Spinner />}>{content()}</Suspense>
+      <CookieBanner />
+    </>
+  )
 }

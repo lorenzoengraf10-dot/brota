@@ -9,6 +9,14 @@ export const FREE_LIMITS = {
 
 export const PRO_PRICE = '$4.000/mes'
 export const WA_NUMBER = '5492920667796'
+export const APP_URL = 'https://brotaonline.com'
+
+// Mensaje de recomendación boca-a-boca (remarketing orgánico)
+export const SHARE_MESSAGE = `Estoy usando Brota 🌱 para organizar mi emprendimiento: ventas, pedidos, clientes y gastos, todo desde el celu. Es gratis, probala: ${APP_URL}`
+
+export function waShareLink(): string {
+  return `https://wa.me/?text=${encodeURIComponent(SHARE_MESSAGE)}`
+}
 
 export const PRO_FEATURES = [
   'Emprendimientos ilimitados',

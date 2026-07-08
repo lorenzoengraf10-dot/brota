@@ -2,7 +2,8 @@ import { useStore } from '@/store/useStore'
 import { formatCurrency, formatDate, today } from '@/lib/format'
 import { orderTotal } from '@/lib/receipt'
 import { dueState, dueLabel, dueBadgeClass } from '@/lib/delivery'
-import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package, Users, Receipt } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package, Users, Receipt, BarChart2, ChevronRight } from 'lucide-react'
+import ShareCard from '@/components/marketing/ShareCard'
 import type { ReactNode } from 'react'
 
 const STATUS_LABEL: Record<string, string> = {
@@ -47,7 +48,7 @@ function NavCard({ onClick, icon, bg, count, label }: {
 }
 
 export default function Dashboard() {
-  const { orders, expenses, products, customers, setView } = useStore()
+  const { orders, expenses, products, customers, user, setView } = useStore()
 
   const thisMonth = today().slice(0, 7)
   const monthlySales = orders
@@ -84,6 +85,23 @@ export default function Dashboard() {
         <NavCard onClick={() => setView('expenses')} icon={<Receipt size={18} color="white" />} bg="bg-red-500" count={expenses.filter(e => e.date.startsWith(thisMonth)).length} label="Gastos del mes" />
       </section>
 
+      <button
+        onClick={() => setView('social')}
+        className="w-full bg-surface rounded-2xl p-4 flex items-center gap-3 shadow-sm active:scale-[0.98] transition-transform text-left"
+      >
+        <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shrink-0">
+          <BarChart2 size={18} color="white" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-ink text-sm">Redes Sociales</p>
+          <p className="text-xs text-ink-soft">Métricas semanales de Instagram, TikTok y Facebook</p>
+        </div>
+        {user?.plan !== 'pro' && (
+          <span className="text-[10px] font-bold text-brand-600 bg-brand-600/10 px-2 py-1 rounded-full shrink-0">PRO</span>
+        )}
+        <ChevronRight size={16} className="text-ink-soft shrink-0" />
+      </button>
+
       {recent.length > 0 ? (
         <section>
           <div className="flex items-center justify-between mb-3">
@@ -119,6 +137,9 @@ export default function Dashboard() {
                 </button>
               )
             })}
+          </div>
+          <div className="mt-4">
+            <ShareCard />
           </div>
         </section>
       ) : (

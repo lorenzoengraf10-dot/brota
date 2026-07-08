@@ -34,15 +34,14 @@
     "zustand": "^5.0.4"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.2",
     "@types/node": "^22.15.21",
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.5.0",
-    "autoprefixer": "^10.4.21",
     "concurrently": "^9.1.2",
     "electron": "^36.3.0",
     "electron-builder": "^25.1.8",
-    "postcss": "^8.5.3",
     "tailwindcss": "^4.1.7",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
@@ -52,8 +51,15 @@
   "build": {
     "appId": "com.brota.app",
     "productName": "Brota",
-    "directories": { "output": "dist-electron" },
-    "win": { "target": "nsis" },
-    "files": ["dist/**/*", "electron/**/*"]
+    "directories": {
+      "output": "dist-electron"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ]
   }
 }

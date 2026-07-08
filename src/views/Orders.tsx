@@ -4,6 +4,9 @@ import { useStore } from '@/store/useStore'
 import { formatCurrency, formatDate, today } from '@/lib/format'
 import { orderTotal, buildReceipt, openWhatsApp } from '@/lib/receipt'
 import { dueState, dueLabel, dueBadgeClass } from '@/lib/delivery'
+import { isAtLimit, FREE_LIMITS } from '@/lib/plan'
+import { trackEvent } from '@/lib/gaTracking'
+import UpgradeModal from '@/components/plan/UpgradeModal'
 import type { Order, OrderItem, OrderStatus, PaymentMethod, DiscountType } from '@/types'
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -48,13 +51,22 @@ function emptyDraft(businessId: string): Omit<Order, 'id' | 'createdAt'> {
 }
 
 export default function Orders() {
-  const { orders, products, customers, business, addOrder, updateOrder, deleteOrder } = useStore()
+  const { orders, products, customers, business, user, addOrder, updateOrder, deleteOrder } = useStore()
   const [filter, setFilter] = useState<Filter>('all')
   const [showForm, setShowForm] = useState(false)
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [showUpgrade, setShowUpgrade] = useState(false)
 
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter)
+  const thisMonth = orders.filter(o => o.date.startsWith(today().slice(0, 7))).length
+  const atLimit = isAtLimit(user?.plan ?? 'free', 'ordersPerMonth', thisMonth)
+
+  function openNew() {
+    if (atLimit) { setShowUpgrade(true); return }
+    setEditingOrder(null)
+    setShowForm(true)
+  }
 
   async function handleAdvance(order: Order) {
     const next = NEXT_STATUS[order.status]
@@ -93,7 +105,7 @@ export default function Orders() {
         {filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center gap-2">
             <p className="text-ink-soft text-sm">Sin pedidos{filter !== 'all' ? ` con estado "${STATUS_LABEL[filter as OrderStatus]}"` : ''}.</p>
-            <button onClick={() => { setEditingOrder(null); setShowForm(true) }} className="text-brand-600 font-medium text-sm">+ Crear pedido</button>
+            <button onClick={openNew} className="text-brand-600 font-medium text-sm">+ Crear pedido</button>
           </div>
         )}
 
@@ -191,7 +203,7 @@ export default function Orders() {
       </div>
 
       <button
-        onClick={() => { setEditingOrder(null); setShowForm(true) }}
+        onClick={openNew}
         className="fixed bottom-20 right-4 w-14 h-14 bg-brand-600 text-white rounded-2xl shadow-lg flex items-center justify-center z-30 active:scale-95 transition-transform"
       >
         <Plus size={24} />
@@ -204,11 +216,15 @@ export default function Orders() {
           onClose={() => setShowForm(false)}
           onSave={async (data) => {
             if (editingOrder) await updateOrder(editingOrder.id, data)
-            else await addOrder(data as Omit<Order, 'id' | 'createdAt'>)
+            else {
+              await addOrder(data as Omit<Order, 'id' | 'createdAt'>)
+              trackEvent('order_created')
+            }
             setShowForm(false)
           }}
         />
       )}
+      <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} />
     </div>
   )
 }
@@ -263,6 +279,7 @@ function OrderForm({
   const total = Math.max(0, subtotal - discountAmt)
 
   async function handleSave() {
+    if (form.items.length === 0) return
     setSaving(true)
     await onSave(form)
     setSaving(false)
@@ -439,9 +456,9 @@ function OrderForm({
             </div>
           )}
 
-          <button onClick={handleSave} disabled={saving}
+          <button onClick={handleSave} disabled={saving || form.items.length === 0}
             className="w-full bg-brand-600 text-white font-semibold py-3 rounded-2xl text-sm disabled:opacity-50">
-            {saving ? 'Guardando...' : (initial ? 'Guardar cambios' : 'Crear pedido')}
+            {saving ? 'Guardando...' : form.items.length === 0 ? 'Agregá al menos un ítem' : (initial ? 'Guardar cambios' : 'Crear pedido')}
           </button>
         </div>
       </div>

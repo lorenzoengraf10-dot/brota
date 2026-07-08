@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Plus, X, Trash2, MessageCircle, Users } from 'lucide-react'
+import { Plus, X, Trash2, MessageCircle, Users, Tag } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { isAtLimit, FREE_LIMITS } from '@/lib/plan'
+import { trackEvent } from '@/lib/gaTracking'
 import UpgradeModal from '@/components/plan/UpgradeModal'
 import type { Customer, Sex } from '@/types'
 
@@ -12,7 +13,7 @@ function emptyCustomer(businessId: string): Omit<Customer, 'id' | 'createdAt'> {
 }
 
 export default function Customers() {
-  const { customers, customerGroups, business, user, addCustomer, updateCustomer, deleteCustomer } = useStore()
+  const { customers, customerGroups, business, user, addCustomer, updateCustomer, deleteCustomer, setView } = useStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Customer | null>(null)
   const [showUpgrade, setShowUpgrade] = useState(false)
@@ -36,12 +37,18 @@ export default function Customers() {
 
   return (
     <div className="pb-24">
-      <div className="p-4">
+      <div className="p-4 flex gap-2">
         <input
           type="text" placeholder="Buscar cliente..."
           value={search} onChange={e => setSearch(e.target.value)}
-          className="w-full bg-surface rounded-2xl px-4 py-2.5 text-sm text-ink placeholder:text-ink-soft shadow-sm"
+          className="flex-1 bg-surface rounded-2xl px-4 py-2.5 text-sm text-ink placeholder:text-ink-soft shadow-sm"
         />
+        <button
+          onClick={() => setView('groups')}
+          className="flex items-center gap-1.5 bg-surface rounded-2xl px-3 py-2.5 text-sm font-medium text-ink-soft shadow-sm shrink-0"
+        >
+          <Tag size={15} /> Grupos
+        </button>
       </div>
 
       {user?.plan === 'free' && (
@@ -123,7 +130,7 @@ export default function Customers() {
           onClose={() => setShowForm(false)}
           onSave={async data => {
             if (editing) await updateCustomer(editing.id, data)
-            else await addCustomer(data as Omit<Customer, 'id' | 'createdAt'>)
+            else { await addCustomer(data as Omit<Customer, 'id' | 'createdAt'>); trackEvent('customer_created') }
             setShowForm(false)
           }}
         />

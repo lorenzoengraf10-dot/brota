@@ -31,8 +31,13 @@ export function formatDateTime(isoStr: string): string {
   })
 }
 
+// Fecha local, no UTC: toISOString() adelanta un día de noche en zonas UTC-x
+export function toLocalISO(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function today(): string {
-  return new Date().toISOString().slice(0, 10)
+  return toLocalISO(new Date())
 }
 
 export function isoWeekStart(date = new Date()): string {
@@ -40,5 +45,5 @@ export function isoWeekStart(date = new Date()): string {
   const day = d.getDay()
   const diff = d.getDate() - day + (day === 0 ? -6 : 1)
   d.setDate(diff)
-  return d.toISOString().slice(0, 10)
+  return toLocalISO(d)
 }

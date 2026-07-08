@@ -110,6 +110,7 @@ interface StoreState {
   darkMode: 'light' | 'dark' | 'system'
   cookieConsent: boolean | null
   onboardingDone: boolean
+  landingSeen: boolean
 
   // Auth
   initialize: () => Promise<void>
@@ -164,6 +165,7 @@ interface StoreState {
   setCookieConsent: (v: boolean) => void
   resetCookieConsent: () => void
   completeOnboarding: () => void
+  setLandingSeen: () => void
 }
 
 // ─────────────────────────────────────────────
@@ -188,13 +190,19 @@ export const useStore = create<StoreState>()(
       darkMode: 'system',
       cookieConsent: null,
       onboardingDone: false,
+      landingSeen: false,
 
       // ── auth ──────────────────────────────────────
       initialize: async () => {
         set({ loadingAuth: true })
         const { data: { session } } = await supabase.auth.getSession()
 
+        // Evita re-bootear (doble fetch) cuando getSession y el evento
+        // SIGNED_IN inicial informan al mismo usuario
+        let bootedUserId: string | null = null
         const boot = async (userId: string, email: string) => {
+          if (bootedUserId === userId) return
+          bootedUserId = userId
           const plan = await fetchPlan(userId)
           const user: AppUser = { id: userId, email, plan, businessId: null }
           set({ user })
@@ -212,6 +220,7 @@ export const useStore = create<StoreState>()(
           if (s?.user) {
             await boot(s.user.id, s.user.email ?? '')
           } else {
+            bootedUserId = null
             set({
               user: null,
               business: null,
@@ -447,6 +456,7 @@ export const useStore = create<StoreState>()(
       setCookieConsent: (v) => set({ cookieConsent: v }),
       resetCookieConsent: () => set({ cookieConsent: null }),
       completeOnboarding: () => set({ onboardingDone: true }),
+      setLandingSeen: () => set({ landingSeen: true }),
     }),
     {
       name: 'brota-v2',
@@ -455,6 +465,7 @@ export const useStore = create<StoreState>()(
         darkMode: s.darkMode,
         cookieConsent: s.cookieConsent,
         onboardingDone: s.onboardingDone,
+        landingSeen: s.landingSeen,
         user: s.user
           ? {
               id: s.user.id,

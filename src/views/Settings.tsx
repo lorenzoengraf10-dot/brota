@@ -5,6 +5,7 @@ import { today } from '@/lib/format'
 import { FREE_LIMITS, PRO_PRICE, canExport, waSupportLink, waDeleteLink } from '@/lib/plan'
 import { exportOrders, exportExpenses, exportProducts, exportCustomers } from '@/lib/export'
 import UpgradeModal from '@/components/plan/UpgradeModal'
+import ShareCard from '@/components/marketing/ShareCard'
 
 const DARK_OPTIONS: { id: 'light' | 'dark' | 'system'; label: string; icon: typeof Sun }[] = [
   { id: 'light', label: 'Claro', icon: Sun },
@@ -129,6 +130,11 @@ export default function Settings() {
           <ExportRow label="Productos" pro={!canExport(user?.plan ?? 'free')} onClick={() => handleExport(() => exportProducts(products))} />
           <ExportRow label="Clientes" pro={!canExport(user?.plan ?? 'free')} onClick={() => handleExport(() => exportCustomers(customers))} />
         </div>
+      </section>
+
+      <section>
+        <h2 className="text-xs font-semibold text-ink-soft uppercase tracking-wide mb-2">Recomendá Brota</h2>
+        <ShareCard />
       </section>
 
       <section>
