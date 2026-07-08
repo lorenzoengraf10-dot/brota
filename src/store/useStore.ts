@@ -47,13 +47,17 @@ function now(): string {
   return new Date().toISOString()
 }
 
-async function fetchPlan(userId: string): Promise<Plan> {
-  const { data } = await supabase
+// fallback: sin conexión no degradamos el plan (un Pro offline sigue Pro)
+async function fetchPlan(userId: string, fallback: Plan = 'free'): Promise<Plan> {
+  const { data, error } = await supabase
     .from('user_plans')
     .select('plan')
     .eq('user_id', userId)
     .single()
-  return ((data as { plan?: string } | null)?.plan as Plan) ?? 'free'
+  if (data) return ((data as { plan?: string }).plan as Plan) ?? 'free'
+  // PGRST116 = fila inexistente (usuario sin plan) → free real
+  if (error?.code === 'PGRST116') return 'free'
+  return fallback
 }
 
 function applyDarkMode(mode: 'light' | 'dark' | 'system'): void {
@@ -65,6 +69,13 @@ function applyDarkMode(mode: 'light' | 'dark' | 'system'): void {
       ? root.classList.add('dark')
       : root.classList.remove('dark')
   }
+}
+
+// Error de red (no de datos): la operación debe reintentarse más tarde
+function isNetworkError(err: { message?: string; code?: string } | null): boolean {
+  if (!navigator.onLine) return true
+  const msg = err?.message ?? ''
+  return /fetch|network|timeout|abort/i.test(msg)
 }
 
 // ─────────────────────────────────────────────
@@ -83,6 +94,14 @@ export type View =
   | 'landing'
   | 'privacy'
   | 'terms'
+
+// ─────────────────────────────────────────────
+// Cola offline: cada mutación local encola su operación remota.
+// Se sincroniza al reconectar; upsert con id de cliente = reintentable.
+// ─────────────────────────────────────────────
+export type PendingOp =
+  | { kind: 'upsert'; table: string; row: Record<string, unknown> }
+  | { kind: 'delete'; table: string; id: string }
 
 // ─────────────────────────────────────────────
 // State
@@ -107,6 +126,11 @@ interface StoreState {
   appointments: Appointment[]
   dataLoading: boolean
 
+  // Offline
+  online: boolean
+  pendingOps: PendingOp[]
+  syncing: boolean
+
   // UI
   currentView: View
   notifications: Notification[]
@@ -119,6 +143,11 @@ interface StoreState {
   initialize: () => Promise<void>
   signOut: () => Promise<void>
   refreshPlan: () => Promise<void>
+
+  // Offline
+  setOnline: (v: boolean) => void
+  enqueue: (op: PendingOp) => void
+  flushQueue: () => Promise<void>
 
   // Bootstrap
   ensureBusiness: (userId: string) => Promise<Business>
@@ -174,6 +203,20 @@ interface StoreState {
   setLandingSeen: () => void
 }
 
+const EMPTY_DATA = {
+  business: null,
+  businesses: [] as Business[],
+  activeBusinessId: null,
+  products: [] as Product[],
+  customers: [] as Customer[],
+  customerGroups: [] as CustomerGroup[],
+  orders: [] as Order[],
+  expenses: [] as Expense[],
+  socialMetrics: [] as SocialMetric[],
+  appointments: [] as Appointment[],
+  pendingOps: [] as PendingOp[],
+}
+
 // ─────────────────────────────────────────────
 // Store
 // ─────────────────────────────────────────────
@@ -193,6 +236,9 @@ export const useStore = create<StoreState>()(
       socialMetrics: [],
       appointments: [],
       dataLoading: false,
+      online: typeof navigator !== 'undefined' ? navigator.onLine : true,
+      pendingOps: [],
+      syncing: false,
       currentView: 'dashboard',
       notifications: [],
       darkMode: 'system',
@@ -200,10 +246,59 @@ export const useStore = create<StoreState>()(
       onboardingDone: false,
       landingSeen: false,
 
+      // ── offline ───────────────────────────────────
+      setOnline: (v) => {
+        set({ online: v })
+        if (v) void get().flushQueue()
+      },
+
+      enqueue: (op) => {
+        set((s) => {
+          let queue = s.pendingOps
+          if (op.kind === 'upsert') {
+            // Coalescing: solo importa el último estado de cada fila
+            queue = queue.filter(
+              (q) => !(q.kind === 'upsert' && q.table === op.table && q.row.id === op.row.id)
+            )
+          } else {
+            // Un delete anula los upserts pendientes de esa fila
+            queue = queue.filter(
+              (q) => !(q.kind === 'upsert' && q.table === op.table && q.row.id === op.id)
+            )
+          }
+          return { pendingOps: [...queue, op] }
+        })
+        void get().flushQueue()
+      },
+
+      flushQueue: async () => {
+        if (get().syncing || !navigator.onLine) return
+        set({ syncing: true })
+        try {
+          while (get().pendingOps.length > 0) {
+            const op = get().pendingOps[0]
+            const { error } =
+              op.kind === 'upsert'
+                ? await supabase.from(op.table).upsert(op.row)
+                : await supabase.from(op.table).delete().eq('id', op.id)
+
+            if (error) {
+              if (isNetworkError(error)) return // reintentar más tarde
+              // Error de datos (constraint, RLS): descartar para no trabar la cola
+              console.warn('[sync] operación descartada:', op, error.message)
+            }
+            // Remover por identidad: si el coalescing reemplazó esta op
+            // mientras se enviaba, la versión nueva queda en la cola
+            set((s) => ({ pendingOps: s.pendingOps.filter((q) => q !== op) }))
+          }
+        } finally {
+          set({ syncing: false })
+        }
+      },
+
       // ── auth ──────────────────────────────────────
       initialize: async () => {
         set({ loadingAuth: true })
-        const { data: { session } } = await supabase.auth.getSession()
 
         // Evita re-bootear (doble fetch) cuando getSession y el evento
         // SIGNED_IN inicial informan al mismo usuario
@@ -211,83 +306,100 @@ export const useStore = create<StoreState>()(
         const boot = async (userId: string, email: string) => {
           if (bootedUserId === userId) return
           bootedUserId = userId
-          const plan = await fetchPlan(userId)
-          const user: AppUser = { id: userId, email, plan, businessId: null }
+          const prev = get().user
+          const plan = await fetchPlan(userId, prev?.id === userId ? prev.plan : 'free')
+          const user: AppUser = {
+            id: userId,
+            email,
+            plan,
+            businessId: prev?.id === userId ? prev.businessId : null,
+          }
           set({ user })
-          const biz = await get().ensureBusiness(userId)
-          set({ user: { ...user, businessId: biz.id } })
-          await get().fetchAll(biz.id)
+          try {
+            const biz = await get().ensureBusiness(userId)
+            set({ user: { ...user, businessId: biz.id } })
+            await get().fetchAll(biz.id)
+          } catch {
+            // Sin conexión: seguimos con los datos persistidos localmente
+          }
         }
 
-        if (session?.user) {
-          await boot(session.user.id, session.user.email ?? '')
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user) {
+            await boot(session.user.id, session.user.email ?? '')
+          }
+        } finally {
+          set({ loadingAuth: false })
         }
-        set({ loadingAuth: false })
 
-        supabase.auth.onAuthStateChange(async (_event, s) => {
+        supabase.auth.onAuthStateChange((_event, s) => {
           if (s?.user) {
-            await boot(s.user.id, s.user.email ?? '')
+            void boot(s.user.id, s.user.email ?? '').catch(() => {})
           } else {
             bootedUserId = null
-            set({
-              user: null,
-              business: null,
-              products: [],
-              customers: [],
-              customerGroups: [],
-              orders: [],
-              expenses: [],
-              socialMetrics: [],
-              appointments: [],
-            })
+            set({ user: null, ...EMPTY_DATA })
           }
         })
       },
 
       signOut: async () => {
         await supabase.auth.signOut()
-        set({
-          user: null,
-          business: null,
-          products: [],
-          customers: [],
-          customerGroups: [],
-          orders: [],
-          expenses: [],
-          socialMetrics: [],
-          appointments: [],
-        })
+        set({ user: null, ...EMPTY_DATA })
       },
 
       refreshPlan: async () => {
         const { user } = get()
         if (!user) return
-        const plan = await fetchPlan(user.id)
+        const plan = await fetchPlan(user.id, user.plan)
         set({ user: { ...user, plan } })
       },
 
       // ── bootstrap ──────────────────────────────────
       ensureBusiness: async (userId) => {
-        const { data } = await supabase
+        const pickActive = (list: Business[]): Business => {
+          const savedId = get().activeBusinessId
+          return list.find((b) => b.id === savedId) ?? list[0]
+        }
+
+        const { data, error } = await supabase
           .from('businesses')
           .select('*')
           .eq('user_id', userId)
           .order('created_at')
 
+        if (error) {
+          // Sin conexión: usar los emprendimientos persistidos
+          const cached = get().businesses
+          if (cached.length > 0) {
+            const active = pickActive(cached)
+            set({ business: active, activeBusinessId: active.id })
+            return active
+          }
+          throw error
+        }
+
         let list = mapRows<Business>((data ?? []) as Record<string, unknown>[])
 
         if (list.length === 0) {
-          const { data: created } = await supabase
+          const { data: created, error: insErr } = await supabase
             .from('businesses')
             .insert({ user_id: userId, name: 'Mi emprendimiento', currency: 'ARS' })
             .select()
             .single()
+          if (insErr || !created) {
+            const cached = get().businesses
+            if (cached.length > 0) {
+              const active = pickActive(cached)
+              set({ business: active, activeBusinessId: active.id })
+              return active
+            }
+            throw insErr ?? new Error('No se pudo crear el emprendimiento')
+          }
           list = [toCamel<Business>(created as Record<string, unknown>)]
         }
 
-        // Restaurar el emprendimiento activo si sigue existiendo
-        const savedId = get().activeBusinessId
-        const active = list.find((b) => b.id === savedId) ?? list[0]
+        const active = pickActive(list)
         set({ businesses: list, business: active, activeBusinessId: active.id })
         return active
       },
@@ -297,96 +409,133 @@ export const useStore = create<StoreState>()(
           business: s.business?.id === id ? { ...s.business, ...data } : s.business,
           businesses: s.businesses.map((b) => (b.id === id ? { ...b, ...data } : b)),
         }))
-        await supabase.from('businesses').update(toSnake(data as Record<string, unknown>)).eq('id', id)
+        const row = get().businesses.find((b) => b.id === id)
+        const userId = get().user?.id
+        if (!row || !userId) return
+        get().enqueue({
+          kind: 'upsert',
+          table: 'businesses',
+          row: { ...toSnake(row as unknown as Record<string, unknown>), user_id: userId },
+        })
       },
 
       addBusiness: async (name) => {
         const { user } = get()
         if (!user) return
-        const { data: created } = await supabase
-          .from('businesses')
-          .insert({ user_id: user.id, name, currency: 'ARS' })
-          .select()
-          .single()
-        if (!created) return
-        const biz = toCamel<Business>(created as Record<string, unknown>)
+        const biz: Business = {
+          id: uid(),
+          name,
+          currency: 'ARS',
+          slug: null,
+          whatsapp: '',
+          createdAt: now(),
+        }
         set((s) => ({ businesses: [...s.businesses, biz] }))
+        get().enqueue({
+          kind: 'upsert',
+          table: 'businesses',
+          row: { ...toSnake(biz as unknown as Record<string, unknown>), user_id: user.id },
+        })
         await get().switchBusiness(biz.id)
       },
 
       switchBusiness: async (id) => {
         const biz = get().businesses.find((b) => b.id === id)
         if (!biz) return
-        set({ business: biz, activeBusinessId: id, currentView: 'dashboard' })
+        // El cache local guarda un solo negocio: al cambiar, descartar lo
+        // que no sea del nuevo (offline muestra vacío, no datos ajenos)
+        set((s) => ({
+          business: biz,
+          activeBusinessId: id,
+          currentView: 'dashboard',
+          products: s.products.filter((x) => x.businessId === id),
+          customers: s.customers.filter((x) => x.businessId === id),
+          customerGroups: s.customerGroups.filter((x) => x.businessId === id),
+          orders: s.orders.filter((x) => x.businessId === id),
+          expenses: s.expenses.filter((x) => x.businessId === id),
+          socialMetrics: s.socialMetrics.filter((x) => x.businessId === id),
+          appointments: s.appointments.filter((x) => x.businessId === id),
+        }))
         await get().fetchAll(id)
       },
 
       fetchAll: async (businessId) => {
         set({ dataLoading: true })
-        const [p, cu, g, o, e, sm, ap] = await Promise.all([
-          supabase.from('products').select('*').eq('business_id', businessId).order('created_at', { ascending: false }),
-          supabase.from('customers').select('*').eq('business_id', businessId).order('name'),
-          supabase.from('customer_groups').select('*').eq('business_id', businessId),
-          supabase.from('orders').select('*').eq('business_id', businessId).order('created_at', { ascending: false }),
-          supabase.from('expenses').select('*').eq('business_id', businessId).order('date', { ascending: false }),
-          supabase.from('social_metrics').select('*').eq('business_id', businessId).order('week_start', { ascending: false }),
-          supabase.from('appointments').select('*').eq('business_id', businessId).order('date'),
-        ])
-        set({
-          products: mapRows<Product>(p.data ?? []),
-          customers: mapRows<Customer>(cu.data ?? []),
-          customerGroups: mapRows<CustomerGroup>(g.data ?? []),
-          orders: mapRows<Order>(o.data ?? []),
-          expenses: mapRows<Expense>(e.data ?? []),
-          socialMetrics: mapRows<SocialMetric>(sm.data ?? []),
-          appointments: mapRows<Appointment>(ap.data ?? []),
-          dataLoading: false,
-        })
+        try {
+          // Primero subir lo pendiente para no pisar cambios locales
+          await get().flushQueue()
+          if (get().pendingOps.length > 0) return
+
+          const [p, cu, g, o, e, sm, ap] = await Promise.all([
+            supabase.from('products').select('*').eq('business_id', businessId).order('created_at', { ascending: false }),
+            supabase.from('customers').select('*').eq('business_id', businessId).order('name'),
+            supabase.from('customer_groups').select('*').eq('business_id', businessId),
+            supabase.from('orders').select('*').eq('business_id', businessId).order('created_at', { ascending: false }),
+            supabase.from('expenses').select('*').eq('business_id', businessId).order('date', { ascending: false }),
+            supabase.from('social_metrics').select('*').eq('business_id', businessId).order('week_start', { ascending: false }),
+            supabase.from('appointments').select('*').eq('business_id', businessId).order('date'),
+          ])
+          // Solo pisar lo local cuando la consulta funcionó (offline: error → conservar)
+          set({
+            ...(p.error ? {} : { products: mapRows<Product>(p.data ?? []) }),
+            ...(cu.error ? {} : { customers: mapRows<Customer>(cu.data ?? []) }),
+            ...(g.error ? {} : { customerGroups: mapRows<CustomerGroup>(g.data ?? []) }),
+            ...(o.error ? {} : { orders: mapRows<Order>(o.data ?? []) }),
+            ...(e.error ? {} : { expenses: mapRows<Expense>(e.data ?? []) }),
+            ...(sm.error ? {} : { socialMetrics: mapRows<SocialMetric>(sm.data ?? []) }),
+            ...(ap.error ? {} : { appointments: mapRows<Appointment>(ap.data ?? []) }),
+          })
+        } finally {
+          set({ dataLoading: false })
+        }
       },
 
       // ── products ──────────────────────────────────
       addProduct: async (p) => {
         const item: Product = { ...p, id: uid(), createdAt: now() }
         set((s) => ({ products: [item, ...s.products] }))
-        await supabase.from('products').insert(toSnake(item as unknown as Record<string, unknown>))
+        get().enqueue({ kind: 'upsert', table: 'products', row: toSnake(item as unknown as Record<string, unknown>) })
       },
       updateProduct: async (id, p) => {
         set((s) => ({ products: s.products.map((x) => x.id === id ? { ...x, ...p } : x) }))
-        await supabase.from('products').update(toSnake(p as unknown as Record<string, unknown>)).eq('id', id)
+        const row = get().products.find((x) => x.id === id)
+        if (row) get().enqueue({ kind: 'upsert', table: 'products', row: toSnake(row as unknown as Record<string, unknown>) })
       },
       deleteProduct: async (id) => {
         set((s) => ({ products: s.products.filter((x) => x.id !== id) }))
-        await supabase.from('products').delete().eq('id', id)
+        get().enqueue({ kind: 'delete', table: 'products', id })
       },
 
       // ── customers ─────────────────────────────────
       addCustomer: async (c) => {
         const item: Customer = { ...c, id: uid(), createdAt: now() }
         set((s) => ({ customers: [item, ...s.customers] }))
-        await supabase.from('customers').insert(toSnake(item as unknown as Record<string, unknown>))
+        get().enqueue({ kind: 'upsert', table: 'customers', row: toSnake(item as unknown as Record<string, unknown>) })
       },
       updateCustomer: async (id, c) => {
         set((s) => ({ customers: s.customers.map((x) => x.id === id ? { ...x, ...c } : x) }))
-        await supabase.from('customers').update(toSnake(c as unknown as Record<string, unknown>)).eq('id', id)
+        const row = get().customers.find((x) => x.id === id)
+        if (row) get().enqueue({ kind: 'upsert', table: 'customers', row: toSnake(row as unknown as Record<string, unknown>) })
       },
       deleteCustomer: async (id) => {
         set((s) => ({ customers: s.customers.filter((x) => x.id !== id) }))
-        await supabase.from('customers').delete().eq('id', id)
+        get().enqueue({ kind: 'delete', table: 'customers', id })
       },
 
       // ── groups ────────────────────────────────────
       addGroup: async (g) => {
         const item: CustomerGroup = { ...g, id: uid(), createdAt: now() }
         set((s) => ({ customerGroups: [item, ...s.customerGroups] }))
-        await supabase.from('customer_groups').insert(toSnake(item as unknown as Record<string, unknown>))
+        get().enqueue({ kind: 'upsert', table: 'customer_groups', row: toSnake(item as unknown as Record<string, unknown>) })
       },
       updateGroup: async (id, g) => {
         set((s) => ({ customerGroups: s.customerGroups.map((x) => x.id === id ? { ...x, ...g } : x) }))
-        await supabase.from('customer_groups').update(toSnake(g as unknown as Record<string, unknown>)).eq('id', id)
+        const row = get().customerGroups.find((x) => x.id === id)
+        if (row) get().enqueue({ kind: 'upsert', table: 'customer_groups', row: toSnake(row as unknown as Record<string, unknown>) })
       },
       deleteGroup: async (id) => {
         set((s) => ({ customerGroups: s.customerGroups.filter((x) => x.id !== id) }))
-        await supabase.from('customer_groups').delete().eq('id', id)
+        get().enqueue({ kind: 'delete', table: 'customer_groups', id })
       },
 
       // ── orders ────────────────────────────────────
@@ -412,21 +561,23 @@ export const useStore = create<StoreState>()(
             return u ? { ...p, stock: u.stock } : p
           }),
         }))
-        await Promise.all(
-          updates.map((u) => supabase.from('products').update({ stock: u.stock }).eq('id', u.id))
-        )
+        for (const u of updates) {
+          const row = get().products.find((p) => p.id === u.id)
+          if (row) get().enqueue({ kind: 'upsert', table: 'products', row: toSnake(row as unknown as Record<string, unknown>) })
+        }
       },
 
       addOrder: async (o) => {
         const item: Order = { ...o, id: uid(), createdAt: now() }
         set((s) => ({ orders: [item, ...s.orders] }))
-        await supabase.from('orders').insert(toSnake(item as unknown as Record<string, unknown>))
+        get().enqueue({ kind: 'upsert', table: 'orders', row: toSnake(item as unknown as Record<string, unknown>) })
         await get().applyStock(item.items, -1)
       },
       updateOrder: async (id, o) => {
         const prev = get().orders.find((x) => x.id === id)
         set((s) => ({ orders: s.orders.map((x) => x.id === id ? { ...x, ...o } : x) }))
-        await supabase.from('orders').update(toSnake(o as unknown as Record<string, unknown>)).eq('id', id)
+        const row = get().orders.find((x) => x.id === id)
+        if (row) get().enqueue({ kind: 'upsert', table: 'orders', row: toSnake(row as unknown as Record<string, unknown>) })
         // Si cambiaron los ítems, revertir el descuento anterior y aplicar el nuevo
         if (o.items && prev) {
           await get().applyStock(prev.items, 1)
@@ -436,7 +587,7 @@ export const useStore = create<StoreState>()(
       deleteOrder: async (id) => {
         const prev = get().orders.find((x) => x.id === id)
         set((s) => ({ orders: s.orders.filter((x) => x.id !== id) }))
-        await supabase.from('orders').delete().eq('id', id)
+        get().enqueue({ kind: 'delete', table: 'orders', id })
         if (prev) await get().applyStock(prev.items, 1)
       },
 
@@ -444,15 +595,16 @@ export const useStore = create<StoreState>()(
       addExpense: async (e) => {
         const item: Expense = { ...e, id: uid(), createdAt: now() }
         set((s) => ({ expenses: [item, ...s.expenses] }))
-        await supabase.from('expenses').insert(toSnake(item as unknown as Record<string, unknown>))
+        get().enqueue({ kind: 'upsert', table: 'expenses', row: toSnake(item as unknown as Record<string, unknown>) })
       },
       updateExpense: async (id, e) => {
         set((s) => ({ expenses: s.expenses.map((x) => x.id === id ? { ...x, ...e } : x) }))
-        await supabase.from('expenses').update(toSnake(e as unknown as Record<string, unknown>)).eq('id', id)
+        const row = get().expenses.find((x) => x.id === id)
+        if (row) get().enqueue({ kind: 'upsert', table: 'expenses', row: toSnake(row as unknown as Record<string, unknown>) })
       },
       deleteExpense: async (id) => {
         set((s) => ({ expenses: s.expenses.filter((x) => x.id !== id) }))
-        await supabase.from('expenses').delete().eq('id', id)
+        get().enqueue({ kind: 'delete', table: 'expenses', id })
       },
 
       // ── social metrics ────────────────────────────
@@ -470,11 +622,11 @@ export const useStore = create<StoreState>()(
         } else {
           set((s) => ({ socialMetrics: [item, ...s.socialMetrics] }))
         }
-        await supabase.from('social_metrics').upsert(toSnake(item as unknown as Record<string, unknown>))
+        get().enqueue({ kind: 'upsert', table: 'social_metrics', row: toSnake(item as unknown as Record<string, unknown>) })
       },
       deleteMetric: async (id) => {
         set((s) => ({ socialMetrics: s.socialMetrics.filter((x) => x.id !== id) }))
-        await supabase.from('social_metrics').delete().eq('id', id)
+        get().enqueue({ kind: 'delete', table: 'social_metrics', id })
       },
 
       // ── appointments ──────────────────────────────
@@ -485,15 +637,16 @@ export const useStore = create<StoreState>()(
             x.date.localeCompare(y.date)
           ),
         }))
-        await supabase.from('appointments').insert(toSnake(item as unknown as Record<string, unknown>))
+        get().enqueue({ kind: 'upsert', table: 'appointments', row: toSnake(item as unknown as Record<string, unknown>) })
       },
       updateAppointment: async (id, a) => {
         set((s) => ({ appointments: s.appointments.map((x) => x.id === id ? { ...x, ...a } : x) }))
-        await supabase.from('appointments').update(toSnake(a as unknown as Record<string, unknown>)).eq('id', id)
+        const row = get().appointments.find((x) => x.id === id)
+        if (row) get().enqueue({ kind: 'upsert', table: 'appointments', row: toSnake(row as unknown as Record<string, unknown>) })
       },
       deleteAppointment: async (id) => {
         set((s) => ({ appointments: s.appointments.filter((x) => x.id !== id) }))
-        await supabase.from('appointments').delete().eq('id', id)
+        get().enqueue({ kind: 'delete', table: 'appointments', id })
       },
 
       // ── ui ────────────────────────────────────────
@@ -528,6 +681,7 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: 'brota-v2',
+      // Persistimos datos y cola para que la app funcione 100% offline
       partialize: (s) => ({
         currentView: s.currentView,
         darkMode: s.darkMode,
@@ -535,6 +689,17 @@ export const useStore = create<StoreState>()(
         onboardingDone: s.onboardingDone,
         landingSeen: s.landingSeen,
         activeBusinessId: s.activeBusinessId,
+        business: s.business,
+        businesses: s.businesses,
+        products: s.products,
+        customers: s.customers,
+        customerGroups: s.customerGroups,
+        orders: s.orders,
+        expenses: s.expenses,
+        socialMetrics: s.socialMetrics,
+        appointments: s.appointments,
+        pendingOps: s.pendingOps,
+        notifications: s.notifications,
         user: s.user
           ? {
               id: s.user.id,

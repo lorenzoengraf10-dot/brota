@@ -30,6 +30,15 @@ export default function App() {
 
   useEffect(() => {
     if (!catalogSlug) initialize()
+
+    const goOnline = () => useStore.getState().setOnline(true)
+    const goOffline = () => useStore.getState().setOnline(false)
+    window.addEventListener('online', goOnline)
+    window.addEventListener('offline', goOffline)
+    return () => {
+      window.removeEventListener('online', goOnline)
+      window.removeEventListener('offline', goOffline)
+    }
   }, [])
 
   useEffect(() => {

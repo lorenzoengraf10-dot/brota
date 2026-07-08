@@ -3,6 +3,7 @@ import { Sprout, Settings, Bell } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import BottomNav from './BottomNav'
 import NotificationsSheet from './NotificationsSheet'
+import OfflineBanner from './OfflineBanner'
 import { dueState } from '@/lib/delivery'
 import FeedbackModal from '@/components/marketing/FeedbackModal'
 import ProEntryModal from '@/components/marketing/ProEntryModal'
@@ -164,6 +165,8 @@ export default function AppLayout() {
           </button>
         </div>
       </header>
+
+      <OfflineBanner />
 
       <main className="flex-1 overflow-y-auto min-h-0">
         <Suspense fallback={<ViewLoader />}>

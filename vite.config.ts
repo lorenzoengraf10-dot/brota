@@ -30,13 +30,15 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallback: '/index.html',
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*$/,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'supabase-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 300 }
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 100, maxAgeSeconds: 86400 }
             }
           }
         ]
