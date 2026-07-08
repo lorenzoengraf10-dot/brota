@@ -33,6 +33,8 @@ export interface Product {
   costPrice: number
   salePrice: number
   stock: number | null
+  // Foto para el catálogo público (URL pública de Supabase Storage)
+  imageUrl?: string | null
   createdAt: string
 }
 

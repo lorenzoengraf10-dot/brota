@@ -17,6 +17,7 @@ interface CatalogProduct {
   name: string
   salePrice: number
   stock: number | null
+  imageUrl: string | null
 }
 
 // Página pública (sin login): brotaonline.com/tienda/<slug>
@@ -49,6 +50,7 @@ export default function PublicCatalog({ slug }: { slug: string }) {
           name: p.name as string,
           salePrice: Number(p.sale_price),
           stock: p.stock === null ? null : Number(p.stock),
+          imageUrl: (p.image_url as string | null) ?? null,
         }))
       )
       setState('ok')
@@ -99,7 +101,15 @@ export default function PublicCatalog({ slug }: { slug: string }) {
           {products.map((p) => {
             const out = p.stock !== null && p.stock <= 0
             return (
-              <div key={p.id} className="bg-surface rounded-2xl p-4 shadow-sm flex items-center gap-3">
+              <div key={p.id} className="bg-surface rounded-2xl p-3 shadow-sm flex items-center gap-3">
+                {p.imageUrl && (
+                  <img
+                    src={p.imageUrl}
+                    alt={p.name}
+                    loading="lazy"
+                    className={`w-16 h-16 rounded-xl object-cover shrink-0 ${out ? 'grayscale opacity-60' : ''}`}
+                  />
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-ink">{p.name}</p>
                   <p className="text-brand-600 font-bold text-sm mt-0.5">{formatCurrency(p.salePrice)}</p>

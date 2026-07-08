@@ -1,14 +1,15 @@
-import { useState } from 'react'
-import { Plus, X, Trash2, Package } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Plus, X, Trash2, Package, Camera, Loader2 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { formatCurrency } from '@/lib/format'
 import { isAtLimit, FREE_LIMITS } from '@/lib/plan'
+import { uploadProductImage } from '@/lib/images'
 import { trackEvent } from '@/lib/gaTracking'
 import UpgradeModal from '@/components/plan/UpgradeModal'
 import type { Product } from '@/types'
 
 function emptyProduct(businessId: string): Omit<Product, 'id' | 'createdAt'> {
-  return { businessId, name: '', costPrice: 0, salePrice: 0, stock: null }
+  return { businessId, name: '', costPrice: 0, salePrice: 0, stock: null, imageUrl: null }
 }
 
 export default function Products() {
@@ -69,9 +70,13 @@ export default function Products() {
             : null
           return (
             <div key={product.id} className="bg-surface rounded-2xl p-4 shadow-sm flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-azure-600/10 flex items-center justify-center shrink-0">
-                <Package size={18} className="text-azure-600" />
-              </div>
+              {product.imageUrl ? (
+                <img src={product.imageUrl} alt={product.name} className="w-10 h-10 rounded-xl object-cover shrink-0" />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-azure-600/10 flex items-center justify-center shrink-0">
+                  <Package size={18} className="text-azure-600" />
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-ink truncate">{product.name}</p>
                 <p className="text-xs text-ink-soft">
@@ -133,11 +138,26 @@ function ProductForm({
 }) {
   const [form, setForm] = useState(() =>
     initial
-      ? { name: initial.name, costPrice: initial.costPrice, salePrice: initial.salePrice, stock: initial.stock, businessId: initial.businessId }
+      ? { name: initial.name, costPrice: initial.costPrice, salePrice: initial.salePrice, stock: initial.stock, imageUrl: initial.imageUrl ?? null, businessId: initial.businessId }
       : emptyProduct(businessId)
   )
   const [saving, setSaving] = useState(false)
   const [hasStock, setHasStock] = useState(initial ? initial.stock !== null : false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function handlePickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    setUploadError(false)
+    const url = await uploadProductImage(businessId, file)
+    setUploading(false)
+    if (url) setForm(f => ({ ...f, imageUrl: url }))
+    else setUploadError(true)
+  }
 
   const margin = form.costPrice > 0 && form.salePrice > 0
     ? Math.round(((form.salePrice - form.costPrice) / form.salePrice) * 100)
@@ -162,6 +182,40 @@ function ProductForm({
         </div>
 
         <div className="overflow-y-auto flex-1 p-5 space-y-5 pb-8">
+          {/* Foto para el catálogo */}
+          <div>
+            <label className="text-xs font-semibold text-ink-soft uppercase tracking-wide block mb-2">Foto (para tu catálogo)</label>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePickPhoto} />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="w-20 h-20 rounded-2xl bg-black/5 dark:bg-white/10 flex items-center justify-center overflow-hidden shrink-0"
+              >
+                {uploading ? (
+                  <Loader2 size={22} className="text-ink-soft animate-spin" />
+                ) : form.imageUrl ? (
+                  <img src={form.imageUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <Camera size={22} className="text-ink-soft" />
+                )}
+              </button>
+              <div className="flex-1">
+                <p className="text-xs text-ink-soft">
+                  {form.imageUrl ? 'Tocá la foto para cambiarla.' : 'Opcional. Se muestra en tu catálogo online.'}
+                </p>
+                {form.imageUrl && (
+                  <button onClick={() => setForm(f => ({ ...f, imageUrl: null }))} className="text-xs text-red-500 font-medium mt-1">
+                    Quitar foto
+                  </button>
+                )}
+                {uploadError && (
+                  <p className="text-xs text-amber-600 mt-1">No se pudo subir. Las fotos necesitan conexión.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="text-xs font-semibold text-ink-soft uppercase tracking-wide block mb-2">Nombre</label>
             <input type="text" placeholder="Nombre del producto" value={form.name}
@@ -207,9 +261,9 @@ function ProductForm({
             )}
           </div>
 
-          <button onClick={handleSave} disabled={saving}
+          <button onClick={handleSave} disabled={saving || uploading}
             className="w-full bg-brand-600 text-white font-semibold py-3 rounded-2xl text-sm disabled:opacity-50">
-            {saving ? 'Guardando...' : (initial ? 'Guardar cambios' : 'Agregar producto')}
+            {saving ? 'Guardando...' : uploading ? 'Subiendo foto...' : (initial ? 'Guardar cambios' : 'Agregar producto')}
           </button>
         </div>
       </div>

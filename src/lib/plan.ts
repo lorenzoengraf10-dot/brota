@@ -7,7 +7,7 @@ export const FREE_LIMITS = {
   expensesPerMonth: 21,
 } as const
 
-export const PRO_PRICE = '$4.000/mes'
+export const PRO_PRICE = '$5.000/mes'
 export const WA_NUMBER = '5492920667796'
 export const APP_URL = 'https://brotaonline.com'
 

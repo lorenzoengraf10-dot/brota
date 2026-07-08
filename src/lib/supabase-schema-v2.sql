@@ -10,11 +10,14 @@ alter table orders
 create index if not exists idx_orders_unpaid on orders(business_id) where paid = false;
 
 -- ===========================================================
--- 2. CATÁLOGO PÚBLICO: slug + WhatsApp del negocio
+-- 2. CATÁLOGO PÚBLICO: slug + WhatsApp del negocio + fotos
 -- ===========================================================
 alter table businesses
   add column if not exists slug text unique,
   add column if not exists whatsapp text not null default '';
+
+alter table products
+  add column if not exists image_url text;
 
 -- Vistas públicas para el catálogo (brotaonline.com/tienda/<slug>).
 -- Exponen SOLO columnas públicas: nunca cost_price, clientes ni ventas.
@@ -27,13 +30,44 @@ create or replace view catalog_businesses as
   where slug is not null;
 
 create or replace view catalog_products as
-  select p.id, p.business_id, p.name, p.sale_price, p.stock
+  select p.id, p.business_id, p.name, p.sale_price, p.stock, p.image_url
   from products p
   join businesses b on b.id = p.business_id
   where b.slug is not null;
 
 grant select on catalog_businesses to anon, authenticated;
 grant select on catalog_products to anon, authenticated;
+
+-- Fotos de productos: bucket público de Storage.
+-- Lectura pública (el catálogo las muestra); escritura solo del dueño
+-- del negocio (la carpeta raíz del archivo es el id de su negocio).
+insert into storage.buckets (id, name, public)
+values ('product-images', 'product-images', true)
+on conflict (id) do nothing;
+
+create policy "fotos: lectura publica" on storage.objects
+  for select using (bucket_id = 'product-images');
+
+create policy "fotos: sube el dueño" on storage.objects
+  for insert with check (
+    bucket_id = 'product-images'
+    and (storage.foldername(name))[1] in
+      (select id::text from businesses where user_id = auth.uid())
+  );
+
+create policy "fotos: actualiza el dueño" on storage.objects
+  for update using (
+    bucket_id = 'product-images'
+    and (storage.foldername(name))[1] in
+      (select id::text from businesses where user_id = auth.uid())
+  );
+
+create policy "fotos: borra el dueño" on storage.objects
+  for delete using (
+    bucket_id = 'product-images'
+    and (storage.foldername(name))[1] in
+      (select id::text from businesses where user_id = auth.uid())
+  );
 
 -- ===========================================================
 -- 3. MULTI-EMPRENDIMIENTO
