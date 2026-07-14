@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, X, Trash2, Tag } from 'lucide-react'
+import { Plus, X, Pencil, Trash2, Tag } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import type { CustomerGroup } from '@/types'
 
@@ -47,7 +47,7 @@ export default function Groups() {
               </div>
               <div className="flex gap-1 shrink-0">
                 <button onClick={() => { setEditing(group); setShowForm(true) }} className="p-2 rounded-xl bg-black/5 text-ink-soft">
-                  <X size={14} className="rotate-45" />
+                  <Pencil size={14} />
                 </button>
                 <button onClick={() => handleDelete(group.id)} className="p-2 rounded-xl bg-red-50 text-red-500">
                   <Trash2 size={14} />

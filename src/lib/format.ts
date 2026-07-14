@@ -6,6 +6,19 @@ export function formatCurrency(amount: number, currency = 'ARS'): string {
   }).format(amount)
 }
 
+// Parseo de montos de formularios: nunca negativo, nunca NaN.
+// (min="0" en el input es solo consultivo: no impide tipear "-50".)
+export function parseMoney(value: string): number {
+  const n = parseFloat(value)
+  return Number.isFinite(n) && n > 0 ? n : 0
+}
+
+// Ídem para cantidades enteras (stock, edad, métricas)
+export function parseCount(value: string): number {
+  const n = parseInt(value, 10)
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
+}
+
 export function formatDate(dateStr: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-AR', {
     day: '2-digit',

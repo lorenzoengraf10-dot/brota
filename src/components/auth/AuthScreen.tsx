@@ -27,6 +27,10 @@ export default function AuthScreen() {
 
   const handlePassword = async () => {
     if (!email.trim() || !password) return
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres')
+      return
+    }
     setLoading(true)
     setError('')
     const { error: signInErr } = await supabase.auth.signInWithPassword({
@@ -34,13 +38,25 @@ export default function AuthScreen() {
       password,
     })
     if (signInErr) {
+      // El login falló: puede ser contraseña incorrecta o usuario nuevo.
+      // Probamos registrar; si la cuenta ya existía, era contraseña incorrecta.
       const { data, error: signUpErr } = await supabase.auth.signUp({
         email: email.trim(),
         password,
       })
-      if (signUpErr) setError(signUpErr.message)
-      // Cuenta creada pero requiere confirmación por email
-      else if (data.user && !data.session) setSent(true)
+      if (signUpErr) {
+        setError(
+          /already registered/i.test(signUpErr.message)
+            ? 'Email o contraseña incorrectos'
+            : signUpErr.message
+        )
+      } else if (data.user && (data.user.identities?.length ?? 0) === 0) {
+        // Supabase devuelve un usuario sin identities cuando el email ya existe
+        setError('Email o contraseña incorrectos')
+      } else if (data.user && !data.session) {
+        // Cuenta creada pero requiere confirmación por email
+        setSent(true)
+      }
     }
     setLoading(false)
   }

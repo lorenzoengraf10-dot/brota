@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Instagram, Music2, Facebook, Lock, Plus } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { canUseSocialMedia } from '@/lib/plan'
-import { isoWeekStart, formatShortDate } from '@/lib/format'
+import { isoWeekStart, formatShortDate, parseCount } from '@/lib/format'
 import UpgradeModal from '@/components/plan/UpgradeModal'
 import type { Platform, SocialMetric } from '@/types'
 
@@ -169,7 +169,7 @@ function Field({ label, value, onChange }: { label: string; value: number; onCha
       <label className="text-[11px] text-ink-soft block mb-1">{label}</label>
       <input
         type="number" min="0" value={value || ''}
-        onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+        onChange={(e) => onChange(parseCount(e.target.value))}
         className="w-full bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink"
       />
     </div>

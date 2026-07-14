@@ -37,7 +37,7 @@ export default function Onboarding() {
           placeholder="Ej: Tortas de Sofi"
           maxLength={60}
           autoFocus
-          className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-white text-ink text-base focus:outline-none focus:border-brand-600"
+          className="w-full px-4 py-3 rounded-2xl border border-black/10 dark:border-white/10 bg-surface text-ink text-base focus:outline-none focus:border-brand-600"
         />
       ),
     },
@@ -52,8 +52,8 @@ export default function Onboarding() {
               onClick={() => setCurrency(c.value)}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-colors ${
                 currency === c.value
-                  ? 'border-brand-600 bg-brand-50'
-                  : 'border-black/10 bg-white'
+                  ? 'border-brand-600 bg-brand-50 dark:bg-brand-600/15'
+                  : 'border-black/10 dark:border-white/10 bg-surface'
               }`}
             >
               <span className="text-sm font-medium text-ink">{c.label}</span>
@@ -68,7 +68,7 @@ export default function Onboarding() {
       subtitle: `${name.trim() || 'Tu emprendimiento'} ya está configurado. Podés empezar a registrar ventas, productos y clientes.`,
       content: (
         <div className="flex justify-center">
-          <div className="w-20 h-20 rounded-full bg-brand-100 flex items-center justify-center">
+          <div className="w-20 h-20 rounded-full bg-brand-100 dark:bg-brand-600/20 flex items-center justify-center">
             <Check size={40} className="text-brand-600" strokeWidth={2.5} />
           </div>
         </div>

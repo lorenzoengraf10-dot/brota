@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
-import { Plus, X, Trash2, Package, Camera, Loader2 } from 'lucide-react'
+import { Plus, X, Pencil, Trash2, Package, Camera, Loader2 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, parseMoney, parseCount } from '@/lib/format'
 import { isAtLimit, FREE_LIMITS, LAUNCH_FREE } from '@/lib/plan'
 import { uploadProductImage } from '@/lib/images'
 import { trackEvent } from '@/lib/gaTracking'
@@ -93,7 +93,7 @@ export default function Products() {
                   onClick={() => { setEditing(product); setShowForm(true) }}
                   className="p-2 rounded-xl bg-black/5 text-ink-soft"
                 >
-                  <X size={14} className="rotate-45" />
+                  <Pencil size={14} />
                 </button>
                 <button onClick={() => handleDelete(product.id)} className="p-2 rounded-xl bg-red-50 text-red-500">
                   <Trash2 size={14} />
@@ -227,13 +227,13 @@ function ProductForm({
             <div>
               <label className="text-xs font-semibold text-ink-soft uppercase tracking-wide block mb-2">Precio de venta</label>
               <input type="number" min="0" placeholder="0" value={form.salePrice || ''}
-                onChange={e => setForm(f => ({ ...f, salePrice: parseFloat(e.target.value) || 0 }))}
+                onChange={e => setForm(f => ({ ...f, salePrice: parseMoney(e.target.value) }))}
                 className="w-full bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink" />
             </div>
             <div>
               <label className="text-xs font-semibold text-ink-soft uppercase tracking-wide block mb-2">Precio de costo</label>
               <input type="number" min="0" placeholder="0" value={form.costPrice || ''}
-                onChange={e => setForm(f => ({ ...f, costPrice: parseFloat(e.target.value) || 0 }))}
+                onChange={e => setForm(f => ({ ...f, costPrice: parseMoney(e.target.value) }))}
                 className="w-full bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink" />
             </div>
           </div>
@@ -256,7 +256,7 @@ function ProductForm({
             </div>
             {hasStock && (
               <input type="number" min="0" placeholder="0" value={form.stock ?? ''}
-                onChange={e => setForm(f => ({ ...f, stock: parseInt(e.target.value) || 0 }))}
+                onChange={e => setForm(f => ({ ...f, stock: parseCount(e.target.value) }))}
                 className="w-full bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink" />
             )}
           </div>

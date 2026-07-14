@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus, X, Trash2, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Pencil, Trash2, CalendarDays } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { formatShortDate, toLocalISO } from '@/lib/format'
 import type { Appointment, AppointmentType, Order } from '@/types'
@@ -149,7 +149,7 @@ export default function Calendar() {
                     onClick={() => { setEditing(ev.item); setShowForm(true) }}
                     className="p-2 rounded-xl bg-black/5 text-ink-soft"
                   >
-                    <X size={14} className="rotate-45" />
+                    <Pencil size={14} />
                   </button>
                   <button onClick={() => handleDelete(ev.item.id)} className="p-2 rounded-xl bg-red-50 text-red-500">
                     <Trash2 size={14} />

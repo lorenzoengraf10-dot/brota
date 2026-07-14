@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Plus, X, Trash2, Receipt as ReceiptIcon } from 'lucide-react'
+import { Plus, X, Pencil, Trash2, Receipt as ReceiptIcon } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import { formatCurrency, formatDate, today } from '@/lib/format'
+import { formatCurrency, formatDate, today, parseMoney } from '@/lib/format'
 import { isAtLimit, FREE_LIMITS, LAUNCH_FREE } from '@/lib/plan'
 import { trackEvent } from '@/lib/gaTracking'
 import UpgradeModal from '@/components/plan/UpgradeModal'
@@ -114,7 +114,7 @@ export default function Expenses() {
                 onClick={() => { setEditing(expense); setShowForm(true) }}
                 className="p-2 rounded-xl bg-black/5 text-ink-soft"
               >
-                <X size={14} className="rotate-45" />
+                <Pencil size={14} />
               </button>
               <button onClick={() => handleDelete(expense.id)} className="p-2 rounded-xl bg-red-50 text-red-500">
                 <Trash2 size={14} />
@@ -185,7 +185,7 @@ function ExpenseForm({
           <div>
             <label className="text-xs font-semibold text-ink-soft uppercase tracking-wide block mb-2">Monto</label>
             <input type="number" min="0" placeholder="0" value={form.amount || ''}
-              onChange={(e) => setForm((f) => ({ ...f, amount: parseFloat(e.target.value) || 0 }))}
+              onChange={(e) => setForm((f) => ({ ...f, amount: parseMoney(e.target.value) }))}
               className="w-full bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink" />
           </div>
 

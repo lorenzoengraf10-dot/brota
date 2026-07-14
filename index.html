@@ -23,15 +23,7 @@
     <meta name="twitter:title" content="Brota — Gestión para emprendedores" />
     <meta name="twitter:description" content="Ventas, pedidos, clientes y gastos de tu emprendimiento, todo desde el celu. Gratis." />
     <meta name="twitter:image" content="https://brotaonline.com/og-image.png" />
-    <script>
-      try {
-        var s = JSON.parse(localStorage.getItem('brota-v2') || '{}');
-        var dm = s.state && s.state.darkMode || 'system';
-        if (dm === 'dark' || (dm === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
-        }
-      } catch(e) {}
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

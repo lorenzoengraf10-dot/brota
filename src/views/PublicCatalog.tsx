@@ -21,7 +21,7 @@ interface CatalogProduct {
 }
 
 // Página pública (sin login): brotaonline.com/tienda/<slug>
-// Lee de las vistas catalog_businesses/catalog_products que solo
+// Lee vía RPCs catalog_business/catalog_products que solo
 // exponen columnas públicas (nunca costos ni datos de clientes)
 export default function PublicCatalog({ slug }: { slug: string }) {
   const [business, setBusiness] = useState<CatalogBusiness | null>(null)

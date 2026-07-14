@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Plus, X, Trash2, MessageCircle, ChevronRight, ArrowRight } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import { formatCurrency, formatDate, today } from '@/lib/format'
+import { formatCurrency, formatDate, today, parseMoney, parseCount } from '@/lib/format'
 import { orderTotal, buildReceipt, openWhatsApp } from '@/lib/receipt'
 import { dueState, dueLabel, dueBadgeClass } from '@/lib/delivery'
-import { isAtLimit, FREE_LIMITS } from '@/lib/plan'
+import { isAtLimit } from '@/lib/plan'
 import { trackEvent } from '@/lib/gaTracking'
 import UpgradeModal from '@/components/plan/UpgradeModal'
 import type { Order, OrderItem, OrderStatus, PaymentMethod, DiscountType } from '@/types'
@@ -52,7 +52,7 @@ function emptyDraft(businessId: string): Omit<Order, 'id' | 'createdAt'> {
 }
 
 export default function Orders() {
-  const { orders, products, customers, business, user, addOrder, updateOrder, deleteOrder } = useStore()
+  const { orders, customers, business, user, addOrder, updateOrder, deleteOrder } = useStore()
   const [filter, setFilter] = useState<Filter>('all')
   const [showForm, setShowForm] = useState(false)
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
@@ -282,9 +282,9 @@ function OrderForm({
     const item: OrderItem = {
       productId: itemProductId,
       name: itemName.trim(),
-      quantity: Math.max(1, parseInt(itemQty) || 1),
-      unitSalePrice: parseFloat(itemPrice) || 0,
-      unitCostPrice: parseFloat(itemCost) || 0,
+      quantity: Math.max(1, parseCount(itemQty)),
+      unitSalePrice: parseMoney(itemPrice),
+      unitCostPrice: parseMoney(itemCost),
     }
     setForm(f => ({ ...f, items: [...f.items, item] }))
     setItemProductId(''); setItemName(''); setItemQty('1'); setItemPrice(''); setItemCost('0')
@@ -398,7 +398,13 @@ function OrderForm({
                 ))}
               </div>
               <input type="number" min="0" placeholder="0" value={form.discount || ''}
-                onChange={e => setForm(f => ({ ...f, discount: parseFloat(e.target.value) || 0 }))}
+                onChange={e => setForm(f => ({
+                  ...f,
+                  // Porcentaje: tope 100. Monto: nunca negativo (parseMoney).
+                  discount: f.discountType === 'percent'
+                    ? Math.min(100, parseMoney(e.target.value))
+                    : parseMoney(e.target.value),
+                }))}
                 className="flex-1 bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink" />
             </div>
           </div>

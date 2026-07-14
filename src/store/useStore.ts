@@ -71,9 +71,8 @@ function applyDarkMode(mode: 'light' | 'dark' | 'system'): void {
   if (mode === 'dark') root.classList.add('dark')
   else if (mode === 'light') root.classList.remove('dark')
   else {
-    window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? root.classList.add('dark')
-      : root.classList.remove('dark')
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    root.classList.toggle('dark', dark)
   }
 }
 
@@ -280,6 +279,7 @@ export const useStore = create<StoreState>()(
       flushQueue: async () => {
         if (get().syncing || !navigator.onLine) return
         set({ syncing: true })
+        let rejected = 0
         try {
           while (get().pendingOps.length > 0) {
             const op = get().pendingOps[0]
@@ -292,6 +292,7 @@ export const useStore = create<StoreState>()(
               if (isNetworkError(error)) return // reintentar más tarde
               // Error de datos (constraint, RLS): descartar para no trabar la cola
               console.warn('[sync] operación descartada:', op, error.message)
+              rejected++
             }
             // Remover por identidad: si el coalescing reemplazó esta op
             // mientras se enviaba, la versión nueva queda en la cola
@@ -299,6 +300,17 @@ export const useStore = create<StoreState>()(
           }
         } finally {
           set({ syncing: false })
+          // El servidor rechazó cambios: avisar y re-sincronizar el estado
+          // local con el remoto para que la UI no muestre datos que no existen
+          if (rejected > 0) {
+            get().addNotification({
+              title: 'Algunos cambios no se guardaron',
+              message: `El servidor rechazó ${rejected} cambio${rejected !== 1 ? 's' : ''}. La app se volvió a sincronizar.`,
+              type: 'error',
+            })
+            const bizId = get().activeBusinessId
+            if (bizId) void get().fetchAll(bizId)
+          }
         }
       },
 

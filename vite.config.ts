@@ -32,13 +32,15 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
         runtimeCaching: [
+          // Solo se cachean las imágenes públicas del catálogo. Los datos
+          // (/rest/v1) y la auth NUNCA van a Cache Storage: contienen PII de
+          // clientes y tokens; el modo offline ya lo cubre el store persistido.
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*$/,
-            handler: 'NetworkFirst',
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*$/,
+            handler: 'CacheFirst',
             options: {
-              cacheName: 'supabase-cache',
-              networkTimeoutSeconds: 5,
-              expiration: { maxEntries: 100, maxAgeSeconds: 86400 }
+              cacheName: 'supabase-images',
+              expiration: { maxEntries: 200, maxAgeSeconds: 7 * 86400 }
             }
           }
         ]

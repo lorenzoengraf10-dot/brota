@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Plus, X, Trash2, MessageCircle, Users, Tag, HandCoins } from 'lucide-react'
+import { Plus, X, Pencil, Trash2, MessageCircle, Users, Tag, HandCoins } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { isAtLimit, FREE_LIMITS, LAUNCH_FREE } from '@/lib/plan'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, parseCount } from '@/lib/format'
 import { orderTotal, openWhatsApp } from '@/lib/receipt'
 import { trackEvent } from '@/lib/gaTracking'
 import UpgradeModal from '@/components/plan/UpgradeModal'
@@ -111,15 +111,20 @@ export default function Customers() {
                   </p>
                 )}
                 {c.notes && <p className="text-xs text-ink-soft truncate">{c.notes}</p>}
-                {debt > 0 && (
+                {debt > 0 && (c.phone ? (
                   <button
-                    onClick={() => c.phone ? sendReminder(c, debt) : undefined}
+                    onClick={() => sendReminder(c, debt)}
                     className="flex items-center gap-1 mt-1 text-xs font-semibold text-rose-600"
                   >
                     <HandCoins size={13} />
-                    Debe {formatCurrency(debt)}{c.phone ? ' · Recordar por WA' : ''}
+                    Debe {formatCurrency(debt)} · Recordar por WA
                   </button>
-                )}
+                ) : (
+                  <p className="flex items-center gap-1 mt-1 text-xs font-semibold text-rose-600">
+                    <HandCoins size={13} />
+                    Debe {formatCurrency(debt)}
+                  </p>
+                ))}
               </div>
               <div className="flex gap-1 shrink-0">
                 {c.phone && (
@@ -129,7 +134,7 @@ export default function Customers() {
                   </a>
                 )}
                 <button onClick={() => { setEditing(c); setShowForm(true) }} className="p-2 rounded-xl bg-black/5 text-ink-soft">
-                  <X size={14} className="rotate-45" />
+                  <Pencil size={14} />
                 </button>
                 <button onClick={() => handleDelete(c.id)} className="p-2 rounded-xl bg-red-50 text-red-500">
                   <Trash2 size={14} />
@@ -218,7 +223,7 @@ function CustomerForm({
             <div>
               <label className="text-xs font-semibold text-ink-soft uppercase tracking-wide block mb-2">Edad</label>
               <input type="number" min="0" max="120" placeholder="—" value={form.age ?? ''}
-                onChange={e => setForm(f => ({ ...f, age: parseInt(e.target.value) || null }))}
+                onChange={e => setForm(f => ({ ...f, age: parseCount(e.target.value) || null }))}
                 className="w-full bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink" />
             </div>
             <div>
