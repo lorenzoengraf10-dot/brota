@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Sun, Moon, Monitor, Download, LogOut, Pencil, Check, X, Lock, Store, Copy, Plus, ChevronRight } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { today, slugify } from '@/lib/format'
-import { FREE_LIMITS, PRO_PRICE, APP_URL, canExport, canAddBusiness, waSupportLink, waDeleteLink } from '@/lib/plan'
+import { FREE_LIMITS, PRO_PRICE, APP_URL, LAUNCH_FREE, FOUNDER_MESSAGE, canExport, canAddBusiness, waSupportLink, waDeleteLink } from '@/lib/plan'
 import { trackEvent } from '@/lib/gaTracking'
 import { exportOrders, exportExpenses, exportProducts, exportCustomers } from '@/lib/export'
 import UpgradeModal from '@/components/plan/UpgradeModal'
@@ -86,7 +86,17 @@ export default function Settings() {
       <section>
         <h2 className="text-xs font-semibold text-ink-soft uppercase tracking-wide mb-2">Plan</h2>
         <div className="bg-surface rounded-2xl p-4 shadow-sm">
-          {user?.plan === 'pro' ? (
+          {LAUNCH_FREE ? (
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="font-bold text-ink">Beta gratis</p>
+                <span className="text-[10px] font-bold text-brand-600 bg-brand-600/10 px-2 py-1 rounded-full">
+                  FUNDADOR 🌱
+                </span>
+              </div>
+              <p className="text-sm text-ink-soft">{FOUNDER_MESSAGE}</p>
+            </div>
+          ) : user?.plan === 'pro' ? (
             <div>
               <p className="font-bold text-ink mb-1">Sos Pro 🌱</p>
               <p className="text-sm text-ink-soft">Gracias por apoyar Brota. Disfrutá de todo sin límites.</p>

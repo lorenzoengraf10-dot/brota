@@ -120,6 +120,8 @@ export interface AppUser {
   id: string
   email: string
   plan: Plan
+  // Se registró durante la beta de lanzamiento → beneficio en Premium
+  isFounder?: boolean
   businessId: string | null
 }
 

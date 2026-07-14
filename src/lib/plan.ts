@@ -1,5 +1,16 @@
 import type { Plan } from '@/types'
 
+// Beta de lanzamiento: todo desbloqueado para todos. Al lanzar Premium,
+// poner en false (y re-habilitar los triggers free_limit_* en Supabase,
+// ver supabase-schema-v3.sql). El plan gratuito se mantiene para siempre
+// con FREE_LIMITS generosos; Premium solo suma extras.
+export const LAUNCH_FREE = true
+
+export const FOUNDER_MESSAGE =
+  'Brota es gratis. Durante la beta tenés todo desbloqueado, sin límites. ' +
+  'Más adelante va a existir un plan Premium con funciones extra, pero el plan gratuito se queda para siempre. ' +
+  'Y por ser usuario fundador, vas a tener un beneficio especial en Premium.'
+
 export const FREE_LIMITS = {
   products: 21,
   clients: 32,
@@ -47,19 +58,19 @@ export function isAtLimit(
   resource: keyof typeof FREE_LIMITS,
   count: number
 ): boolean {
-  if (plan === 'pro') return false
+  if (LAUNCH_FREE || plan === 'pro') return false
   return count >= FREE_LIMITS[resource]
 }
 
 export function canUseSocialMedia(plan: Plan): boolean {
-  return plan === 'pro'
+  return LAUNCH_FREE || plan === 'pro'
 }
 
 // Free: 1 emprendimiento. Pro: ilimitados.
 export function canAddBusiness(plan: Plan, count: number): boolean {
-  return plan === 'pro' || count < 1
+  return LAUNCH_FREE || plan === 'pro' || count < 1
 }
 
 export function canExport(plan: Plan): boolean {
-  return plan === 'pro'
+  return LAUNCH_FREE || plan === 'pro'
 }

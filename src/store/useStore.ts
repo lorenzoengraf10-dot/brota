@@ -48,16 +48,22 @@ function now(): string {
 }
 
 // fallback: sin conexión no degradamos el plan (un Pro offline sigue Pro)
-async function fetchPlan(userId: string, fallback: Plan = 'free'): Promise<Plan> {
+async function fetchPlan(
+  userId: string,
+  fallback: Plan = 'free'
+): Promise<{ plan: Plan; isFounder: boolean }> {
   const { data, error } = await supabase
     .from('user_plans')
-    .select('plan')
+    .select('plan, is_founder')
     .eq('user_id', userId)
     .single()
-  if (data) return ((data as { plan?: string }).plan as Plan) ?? 'free'
+  if (data) {
+    const row = data as { plan?: string; is_founder?: boolean }
+    return { plan: (row.plan as Plan) ?? 'free', isFounder: row.is_founder ?? false }
+  }
   // PGRST116 = fila inexistente (usuario sin plan) → free real
-  if (error?.code === 'PGRST116') return 'free'
-  return fallback
+  if (error?.code === 'PGRST116') return { plan: 'free', isFounder: false }
+  return { plan: fallback, isFounder: false }
 }
 
 function applyDarkMode(mode: 'light' | 'dark' | 'system'): void {
@@ -307,11 +313,12 @@ export const useStore = create<StoreState>()(
           if (bootedUserId === userId) return
           bootedUserId = userId
           const prev = get().user
-          const plan = await fetchPlan(userId, prev?.id === userId ? prev.plan : 'free')
+          const { plan, isFounder } = await fetchPlan(userId, prev?.id === userId ? prev.plan : 'free')
           const user: AppUser = {
             id: userId,
             email,
             plan,
+            isFounder,
             businessId: prev?.id === userId ? prev.businessId : null,
           }
           set({ user })
@@ -351,8 +358,8 @@ export const useStore = create<StoreState>()(
       refreshPlan: async () => {
         const { user } = get()
         if (!user) return
-        const plan = await fetchPlan(user.id, user.plan)
-        set({ user: { ...user, plan } })
+        const { plan, isFounder } = await fetchPlan(user.id, user.plan)
+        set({ user: { ...user, plan, isFounder } })
       },
 
       // ── bootstrap ──────────────────────────────────

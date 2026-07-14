@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Plus, X, Trash2, Receipt as ReceiptIcon } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { formatCurrency, formatDate, today } from '@/lib/format'
-import { isAtLimit, FREE_LIMITS } from '@/lib/plan'
+import { isAtLimit, FREE_LIMITS, LAUNCH_FREE } from '@/lib/plan'
 import { trackEvent } from '@/lib/gaTracking'
 import UpgradeModal from '@/components/plan/UpgradeModal'
 import type { Expense, ExpenseCategory } from '@/types'
@@ -78,7 +78,7 @@ export default function Expenses() {
         ))}
       </div>
 
-      {user?.plan === 'free' && (
+      {!LAUNCH_FREE && user?.plan === 'free' && (
         <div className="px-4 mb-3">
           <div className="bg-surface rounded-2xl p-3 flex items-center justify-between">
             <p className="text-xs text-ink-soft">{inMonth.length}/{FREE_LIMITS.expensesPerMonth} gastos este mes (plan gratuito)</p>

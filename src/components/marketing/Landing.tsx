@@ -39,6 +39,13 @@ export default function Landing() {
           Empezar gratis
         </button>
         <p className="mt-3 text-xs text-ink-soft">Sin tarjeta. Sin instalación.</p>
+        <div className="mt-6 bg-brand-600/10 rounded-2xl px-4 py-3 max-w-xs">
+          <p className="text-xs text-ink leading-relaxed">
+            <span className="font-bold text-brand-600">Gratis para siempre.</span>{' '}
+            Durante la beta tenés todo desbloqueado. Más adelante va a existir un plan
+            Premium con extras opcionales — pero lo gratis se queda.
+          </p>
+        </div>
       </div>
 
       {/* Features */}

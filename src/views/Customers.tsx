@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, X, Trash2, MessageCircle, Users, Tag, HandCoins } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import { isAtLimit, FREE_LIMITS } from '@/lib/plan'
+import { isAtLimit, FREE_LIMITS, LAUNCH_FREE } from '@/lib/plan'
 import { formatCurrency } from '@/lib/format'
 import { orderTotal, openWhatsApp } from '@/lib/receipt'
 import { trackEvent } from '@/lib/gaTracking'
@@ -65,7 +65,7 @@ export default function Customers() {
         </button>
       </div>
 
-      {user?.plan === 'free' && (
+      {!LAUNCH_FREE && user?.plan === 'free' && (
         <div className="px-4 mb-3">
           <div className="bg-surface rounded-2xl p-3 flex items-center justify-between">
             <p className="text-xs text-ink-soft">{customers.length}/{FREE_LIMITS.clients} clientes (plan gratuito)</p>

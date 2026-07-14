@@ -7,7 +7,9 @@ import OfflineBanner from './OfflineBanner'
 import { dueState } from '@/lib/delivery'
 import FeedbackModal from '@/components/marketing/FeedbackModal'
 import ProEntryModal from '@/components/marketing/ProEntryModal'
+import FounderModal from '@/components/marketing/FounderModal'
 import InstallPrompt from '@/components/marketing/InstallPrompt'
+import { LAUNCH_FREE } from '@/lib/plan'
 import { today } from '@/lib/format'
 import { trackEvent, trackPageView } from '@/lib/gaTracking'
 
@@ -25,6 +27,7 @@ const INSTALL_KEY = 'brota-install'
 const FEEDBACK_KEY = 'brota-feedback-asked'
 const PRO_LAST_KEY = 'brota-pro-last-shown'
 const PRO_SNOOZE_KEY = 'brota-pro-snoozed'
+const FOUNDER_KEY = 'brota-founder-shown'
 const DELIVERY_NOTIF_KEY = 'brota-delivery-notif'
 const DAY = 86400000
 // El modal Pro aparece cada 2 días; "No volver a mostrar" lo silencia 12 días
@@ -57,6 +60,7 @@ export default function AppLayout() {
   const { currentView, setView, notifications, user, orders, addNotification } = useStore()
   const unread = notifications.filter((n) => !n.read).length
   const [showPro, setShowPro] = useState(false)
+  const [showFounder, setShowFounder] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
 
@@ -109,6 +113,13 @@ export default function AppLayout() {
       if (feedbackDue) {
         setShowFeedback(true)
         trackEvent('feedback_prompt_shown')
+      } else if (LAUNCH_FREE) {
+        // Beta: bienvenida de fundador, una sola vez por dispositivo
+        if (!localStorage.getItem(FOUNDER_KEY)) {
+          setShowFounder(true)
+          localStorage.setItem(FOUNDER_KEY, '1')
+          trackEvent('founder_modal_shown')
+        }
       } else if (user.plan !== 'pro' && proDue && !proSnoozed) {
         setShowPro(true)
         localStorage.setItem(PRO_LAST_KEY, String(Date.now()))
@@ -180,6 +191,7 @@ export default function AppLayout() {
       <NotificationsSheet open={showNotifications} onClose={() => setShowNotifications(false)} />
       <FeedbackModal open={showFeedback} onClose={handleFeedbackClose} />
       <ProEntryModal open={showPro} onClose={() => setShowPro(false)} onSnooze={handleProSnooze} />
+      <FounderModal open={showFounder} onClose={() => setShowFounder(false)} />
     </div>
   )
 }

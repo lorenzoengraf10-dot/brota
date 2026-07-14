@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { Plus, X, Trash2, Package, Camera, Loader2 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { formatCurrency } from '@/lib/format'
-import { isAtLimit, FREE_LIMITS } from '@/lib/plan'
+import { isAtLimit, FREE_LIMITS, LAUNCH_FREE } from '@/lib/plan'
 import { uploadProductImage } from '@/lib/images'
 import { trackEvent } from '@/lib/gaTracking'
 import UpgradeModal from '@/components/plan/UpgradeModal'
@@ -42,7 +42,7 @@ export default function Products() {
         />
       </div>
 
-      {user?.plan === 'free' && (
+      {!LAUNCH_FREE && user?.plan === 'free' && (
         <div className="px-4 mb-3">
           <div className="bg-surface rounded-2xl p-3 flex items-center justify-between">
             <p className="text-xs text-ink-soft">{products.length}/{FREE_LIMITS.products} productos (plan gratuito)</p>
