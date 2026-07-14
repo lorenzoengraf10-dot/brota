@@ -112,7 +112,7 @@ export default function Orders() {
         ))}
       </div>
 
-      <div className="px-4 space-y-3">
+      <div className="px-4 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3 lg:items-start">
         {filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center gap-2">
             <p className="text-ink-soft text-sm">Sin pedidos{filter !== 'all' ? ` con estado "${STATUS_LABEL[filter as OrderStatus]}"` : ''}.</p>
@@ -228,13 +228,13 @@ export default function Orders() {
 
       <button
         onClick={openQuickSale}
-        className="fixed bottom-[9.5rem] right-4 h-11 px-4 bg-surface text-brand-600 border border-brand-600/30 rounded-2xl shadow-lg flex items-center gap-1.5 justify-center z-30 active:scale-95 transition-transform text-sm font-bold"
+        className="fixed bottom-[9.5rem] lg:bottom-24 right-4 lg:right-8 h-11 px-4 bg-surface text-brand-600 border border-brand-600/30 rounded-2xl shadow-lg flex items-center gap-1.5 justify-center z-30 active:scale-95 transition-transform text-sm font-bold"
       >
         <Zap size={16} /> Venta rápida
       </button>
       <button
         onClick={openNew}
-        className="fixed bottom-20 right-4 w-14 h-14 bg-brand-600 text-white rounded-2xl shadow-lg flex items-center justify-center z-30 active:scale-95 transition-transform"
+        className="fixed bottom-20 lg:bottom-8 right-4 lg:right-8 w-14 h-14 bg-brand-600 text-white rounded-2xl shadow-lg flex items-center justify-center z-30 active:scale-95 transition-transform"
       >
         <Plus size={24} />
       </button>
@@ -333,9 +333,9 @@ function OrderForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-surface rounded-t-3xl max-h-[92vh] flex flex-col">
+      <div className="relative bg-surface rounded-t-3xl sm:rounded-3xl max-h-[92vh] flex flex-col w-full sm:max-w-lg">
         <div className="flex items-center justify-between p-5 pb-3 border-b border-black/5 shrink-0">
           <h2 className="font-bold text-ink text-lg">{initial ? 'Editar pedido' : 'Nuevo pedido'}</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5">

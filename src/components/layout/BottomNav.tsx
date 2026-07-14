@@ -1,22 +1,12 @@
-import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, ShoppingBag, Package, Users, CreditCard, CalendarDays } from 'lucide-react'
-import { useStore, type View } from '@/store/useStore'
-
-const tabs: Array<{ id: View; label: string; icon: LucideIcon }> = [
-  { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard },
-  { id: 'orders', label: 'Ventas', icon: ShoppingBag },
-  { id: 'products', label: 'Productos', icon: Package },
-  { id: 'customers', label: 'Clientes', icon: Users },
-  { id: 'expenses', label: 'Gastos', icon: CreditCard },
-  { id: 'calendar', label: 'Agenda', icon: CalendarDays },
-]
+import { useStore } from '@/store/useStore'
+import { mainTabs } from './navItems'
 
 export default function BottomNav() {
   const { currentView, setView } = useStore()
 
   return (
-    <nav className="flex bg-surface border-t border-black/5 sticky bottom-0 z-40">
-      {tabs.map(({ id, label, icon: Icon }) => {
+    <nav className="flex lg:hidden bg-surface border-t border-black/5 sticky bottom-0 z-40">
+      {mainTabs.map(({ id, label, icon: Icon }) => {
         const active = currentView === id
         return (
           <button

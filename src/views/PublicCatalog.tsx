@@ -225,9 +225,9 @@ export default function PublicCatalog({ slug }: { slug: string }) {
 
       {/* Sheet del pedido */}
       {showCart && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+        <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowCart(false)} />
-          <div className="relative bg-surface rounded-t-3xl max-h-[85vh] flex flex-col max-w-lg mx-auto w-full">
+          <div className="relative bg-surface rounded-t-3xl max-h-[85vh] flex flex-col max-w-lg mx-auto w-full sm:rounded-3xl">
             <div className="flex items-center justify-between p-5 pb-3 border-b border-black/5 shrink-0">
               <h2 className="font-bold text-ink text-lg">Tu pedido</h2>
               <button onClick={() => setShowCart(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5">

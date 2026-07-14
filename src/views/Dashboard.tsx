@@ -87,7 +87,7 @@ export default function Dashboard() {
   const hasChartData = weeklySales.some(w => w.total > 0)
 
   return (
-    <div className="p-4 space-y-5 pb-24">
+    <div className="p-4 space-y-5 pb-24 lg:pb-8">
       <section>
         <h2 className="text-xs font-semibold text-ink-soft uppercase tracking-wide mb-3">Este mes</h2>
         <div className="grid grid-cols-3 gap-2">
@@ -161,7 +161,7 @@ export default function Dashboard() {
         <Zap size={17} /> Venta rápida
       </button>
 
-      <section className="grid grid-cols-2 gap-3">
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <NavCard onClick={() => setView('orders')} icon={<ShoppingBag size={18} color="white" />} bg="bg-brand-600" count={activeOrders.length} label="Pedidos activos" />
         <NavCard onClick={() => setView('products')} icon={<Package size={18} color="white" />} bg="bg-azure-600" count={products.length} label="Productos" />
         <NavCard onClick={() => setView('customers')} icon={<Users size={18} color="white" />} bg="bg-purple-500" count={customers.length} label="Clientes" />

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { Sprout, Settings, Bell } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import BottomNav from './BottomNav'
+import Sidebar from './Sidebar'
 import NotificationsSheet from './NotificationsSheet'
 import OfflineBanner from './OfflineBanner'
 import { dueState } from '@/lib/delivery'
@@ -145,11 +146,13 @@ export default function AppLayout() {
   }
 
   return (
-    <div className="flex flex-col h-full max-w-lg mx-auto bg-cream">
+    <div className="flex h-full bg-cream">
+      <Sidebar />
+      <div className="flex flex-col flex-1 min-w-0 h-full max-w-lg mx-auto lg:max-w-none lg:mx-0">
       <header className="flex items-center justify-between px-4 py-3 bg-surface border-b border-black/5 sticky top-0 z-40">
         <button
           onClick={() => setView('dashboard')}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 lg:invisible"
         >
           <span className="w-7 h-7 rounded-xl bg-brand-600 flex items-center justify-center">
             <Sprout size={14} color="white" strokeWidth={2.5} />
@@ -170,7 +173,7 @@ export default function AppLayout() {
           </button>
           <button
             onClick={() => setView('settings')}
-            className="p-2 rounded-full hover:bg-black/5 transition-colors"
+            className="p-2 rounded-full hover:bg-black/5 transition-colors lg:hidden"
           >
             <Settings size={20} className="text-ink-soft" strokeWidth={1.75} />
           </button>
@@ -180,9 +183,11 @@ export default function AppLayout() {
       <OfflineBanner />
 
       <main className="flex-1 overflow-y-auto min-h-0">
-        <Suspense fallback={<ViewLoader />}>
-          <CurrentView view={currentView} />
-        </Suspense>
+        <div className="mx-auto w-full max-w-lg lg:max-w-5xl lg:px-6">
+          <Suspense fallback={<ViewLoader />}>
+            <CurrentView view={currentView} />
+          </Suspense>
+        </div>
       </main>
 
       <InstallPrompt />
@@ -192,6 +197,7 @@ export default function AppLayout() {
       <FeedbackModal open={showFeedback} onClose={handleFeedbackClose} />
       <ProEntryModal open={showPro} onClose={() => setShowPro(false)} onSnooze={handleProSnooze} />
       <FounderModal open={showFounder} onClose={() => setShowFounder(false)} />
+      </div>
     </div>
   )
 }

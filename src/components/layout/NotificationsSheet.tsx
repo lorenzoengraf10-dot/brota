@@ -14,9 +14,9 @@ export default function NotificationsSheet({ open, onClose }: { open: boolean; o
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-surface rounded-t-3xl max-h-[75vh] flex flex-col max-w-lg mx-auto w-full">
+      <div className="relative bg-surface rounded-t-3xl max-h-[75vh] flex flex-col max-w-lg mx-auto w-full sm:rounded-3xl">
         <div className="flex items-center justify-between p-5 pb-3 border-b border-black/5 shrink-0">
           <h2 className="font-bold text-ink text-lg">Notificaciones</h2>
           <div className="flex items-center gap-2">

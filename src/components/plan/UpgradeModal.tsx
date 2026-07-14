@@ -13,8 +13,8 @@ export default function UpgradeModal({ open, onClose }: Props) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/50">
-      <div className="bg-surface w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-10">
+    <div className="fixed inset-0 z-50 flex items-end bg-black/50 sm:items-center sm:justify-center">
+      <div className="bg-surface w-full max-w-lg sm:max-w-md mx-auto rounded-t-3xl sm:rounded-3xl p-6 pb-10 sm:pb-6">
         <div className="flex items-center justify-between mb-5">
           <div>
             <span className="text-xs font-bold text-brand-600 uppercase tracking-widest">Plan Pro</span>

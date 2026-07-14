@@ -95,9 +95,9 @@ export default function QuickSale({ open, onClose }: { open: boolean; onClose: (
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-cream rounded-t-3xl h-[92vh] flex flex-col max-w-lg mx-auto w-full">
+      <div className="relative bg-cream rounded-t-3xl sm:rounded-3xl h-[92vh] sm:h-[85vh] flex flex-col max-w-lg mx-auto w-full">
         <div className="flex items-center justify-between p-5 pb-3 shrink-0">
           <h2 className="font-bold text-ink text-lg flex items-center gap-2">
             <Zap size={18} className="text-brand-600" /> Venta rápida

@@ -24,8 +24,8 @@ export default function FeedbackModal({ open, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/50">
-      <div className="bg-surface w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-10">
+    <div className="fixed inset-0 z-50 flex items-end bg-black/50 sm:items-center sm:justify-center">
+      <div className="bg-surface w-full max-w-lg sm:max-w-md mx-auto rounded-t-3xl sm:rounded-3xl p-6 pb-10 sm:pb-6">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xl font-bold text-ink">¿Cómo va Brota? 🌱</h2>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-black/5">
