@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { useStore } from '@/store/useStore'
+import QuickSale from '@/components/orders/QuickSale'
+import { Zap } from 'lucide-react'
 import { formatCurrency, formatDate, formatShortDate, today, isoWeekStart } from '@/lib/format'
 import { orderTotal } from '@/lib/receipt'
 import { dueState, dueLabel, dueBadgeClass } from '@/lib/delivery'
@@ -52,6 +55,7 @@ function NavCard({ onClick, icon, bg, count, label }: {
 
 export default function Dashboard() {
   const { orders, expenses, products, customers, user, setView } = useStore()
+  const [showQuickSale, setShowQuickSale] = useState(false)
 
   const thisMonth = today().slice(0, 7)
   const monthlySales = orders
@@ -150,6 +154,13 @@ export default function Dashboard() {
         </button>
       )}
 
+      <button
+        onClick={() => setShowQuickSale(true)}
+        className="w-full flex items-center justify-center gap-2 bg-brand-600 text-white rounded-2xl py-3.5 font-bold text-sm shadow-sm active:scale-[0.98] transition-transform"
+      >
+        <Zap size={17} /> Venta rápida
+      </button>
+
       <section className="grid grid-cols-2 gap-3">
         <NavCard onClick={() => setView('orders')} icon={<ShoppingBag size={18} color="white" />} bg="bg-brand-600" count={activeOrders.length} label="Pedidos activos" />
         <NavCard onClick={() => setView('products')} icon={<Package size={18} color="white" />} bg="bg-azure-600" count={products.length} label="Productos" />
@@ -238,6 +249,8 @@ export default function Dashboard() {
           </button>
         </div>
       )}
+
+      <QuickSale open={showQuickSale} onClose={() => setShowQuickSale(false)} />
     </div>
   )
 }

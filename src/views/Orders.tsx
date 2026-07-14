@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Plus, X, Trash2, MessageCircle, ChevronRight, ArrowRight } from 'lucide-react'
+import { Plus, X, Trash2, MessageCircle, ChevronRight, ArrowRight, Zap } from 'lucide-react'
+import QuickSale from '@/components/orders/QuickSale'
 import { useStore } from '@/store/useStore'
 import { formatCurrency, formatDate, today, parseMoney, parseCount } from '@/lib/format'
 import { orderTotal, buildReceipt, openWhatsApp } from '@/lib/receipt'
@@ -58,6 +59,7 @@ export default function Orders() {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [showQuickSale, setShowQuickSale] = useState(false)
 
   const filtered =
     filter === 'all' ? orders :
@@ -70,6 +72,11 @@ export default function Orders() {
     if (atLimit) { setShowUpgrade(true); return }
     setEditingOrder(null)
     setShowForm(true)
+  }
+
+  function openQuickSale() {
+    if (atLimit) { setShowUpgrade(true); return }
+    setShowQuickSale(true)
   }
 
   async function handleAdvance(order: Order) {
@@ -220,12 +227,19 @@ export default function Orders() {
       </div>
 
       <button
+        onClick={openQuickSale}
+        className="fixed bottom-[9.5rem] right-4 h-11 px-4 bg-surface text-brand-600 border border-brand-600/30 rounded-2xl shadow-lg flex items-center gap-1.5 justify-center z-30 active:scale-95 transition-transform text-sm font-bold"
+      >
+        <Zap size={16} /> Venta rápida
+      </button>
+      <button
         onClick={openNew}
         className="fixed bottom-20 right-4 w-14 h-14 bg-brand-600 text-white rounded-2xl shadow-lg flex items-center justify-center z-30 active:scale-95 transition-transform"
       >
         <Plus size={24} />
       </button>
 
+      <QuickSale open={showQuickSale} onClose={() => setShowQuickSale(false)} />
       {showForm && (
         <OrderForm
           initial={editingOrder}
