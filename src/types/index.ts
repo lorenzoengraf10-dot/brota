@@ -23,6 +23,13 @@ export interface Business {
   slug?: string | null
   // WhatsApp del negocio para el botón "Pedir" del catálogo
   whatsapp?: string
+  // Mini-sitio: datos que se muestran en el catálogo público
+  description?: string
+  logoUrl?: string | null
+  hoursText?: string
+  instagram?: string
+  tiktok?: string
+  address?: string
   createdAt: string
 }
 

@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import { Sun, Moon, Monitor, Download, LogOut, Pencil, Check, X, Lock, Store, Copy, Plus, ChevronRight } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Sun, Moon, Monitor, Download, LogOut, Pencil, Check, X, Lock, Store, Copy, Plus, ChevronRight, Camera, Loader2 } from 'lucide-react'
+import { uploadProductImage } from '@/lib/images'
+import type { Business } from '@/types'
 import { useStore } from '@/store/useStore'
 import { today, slugify } from '@/lib/format'
 import { FREE_LIMITS, PRO_PRICE, APP_URL, LAUNCH_FREE, FOUNDER_MESSAGE, canExport, canAddBusiness, waSupportLink, waDeleteLink } from '@/lib/plan'
@@ -260,6 +262,7 @@ export default function Settings() {
                   <p className="text-[11px] text-amber-600 mt-1.5">Sin número, el botón "Pedir" no aparece en tu catálogo.</p>
                 )}
               </div>
+              <StoreProfileForm business={business!} onSave={(data) => updateBusiness(business!.id, data)} />
             </>
           ) : (
             <div className="flex items-start gap-3">
@@ -316,6 +319,104 @@ export default function Settings() {
       </section>
 
       <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} />
+    </div>
+  )
+}
+
+// Mini-sitio: datos que se muestran en el catálogo público
+function StoreProfileForm({ business, onSave }: {
+  business: Business
+  onSave: (data: Partial<Business>) => Promise<void>
+}) {
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({
+    description: business.description ?? '',
+    hoursText: business.hoursText ?? '',
+    instagram: business.instagram ?? '',
+    tiktok: business.tiktok ?? '',
+    address: business.address ?? '',
+    logoUrl: business.logoUrl ?? null,
+  })
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function handlePickLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    const url = await uploadProductImage(business.id, file)
+    setUploading(false)
+    if (url) setForm(f => ({ ...f, logoUrl: url }))
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    await onSave({
+      ...form,
+      instagram: form.instagram.replace(/^@/, '').trim(),
+      tiktok: form.tiktok.replace(/^@/, '').trim(),
+    })
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+    trackEvent('store_profile_saved')
+  }
+
+  const inputClass = 'w-full bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink placeholder:text-ink-soft'
+
+  return (
+    <div className="pt-3 border-t border-black/5">
+      <button onClick={() => setOpen(v => !v)} className="w-full flex items-center justify-between">
+        <div className="text-left">
+          <p className="text-sm font-semibold text-ink">Mi tienda</p>
+          <p className="text-[11px] text-ink-soft">Logo, descripción, horarios y redes de tu catálogo</p>
+        </div>
+        <ChevronRight size={15} className={`text-ink-soft transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+      {open && (
+        <div className="space-y-3 mt-3">
+          <div className="flex items-center gap-3">
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePickLogo} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="w-16 h-16 rounded-2xl bg-black/5 dark:bg-white/10 flex items-center justify-center overflow-hidden shrink-0"
+            >
+              {uploading ? (
+                <Loader2 size={20} className="text-ink-soft animate-spin" />
+              ) : form.logoUrl ? (
+                <img src={form.logoUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <Camera size={20} className="text-ink-soft" />
+              )}
+            </button>
+            <p className="text-xs text-ink-soft flex-1">Logo de tu tienda. Se muestra arriba de todo en tu catálogo.</p>
+          </div>
+          <textarea
+            placeholder="Descripción corta (qué vendés, qué te hace especial)"
+            value={form.description} rows={2} maxLength={200}
+            onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+            className={`${inputClass} resize-none`}
+          />
+          <input type="text" placeholder="Horarios (Ej: Lun a Vie 9 a 18hs)" value={form.hoursText}
+            onChange={e => setForm(f => ({ ...f, hoursText: e.target.value }))} className={inputClass} />
+          <input type="text" placeholder="Dirección o zona de entrega" value={form.address}
+            onChange={e => setForm(f => ({ ...f, address: e.target.value }))} className={inputClass} />
+          <div className="grid grid-cols-2 gap-2">
+            <input type="text" placeholder="Instagram (sin @)" value={form.instagram}
+              onChange={e => setForm(f => ({ ...f, instagram: e.target.value }))} className={inputClass} />
+            <input type="text" placeholder="TikTok (sin @)" value={form.tiktok}
+              onChange={e => setForm(f => ({ ...f, tiktok: e.target.value }))} className={inputClass} />
+          </div>
+          <button onClick={handleSave} disabled={saving || uploading}
+            className="w-full bg-brand-600 text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50">
+            {saved ? '✓ Guardado' : saving ? 'Guardando...' : 'Guardar mi tienda'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

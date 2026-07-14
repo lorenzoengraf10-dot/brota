@@ -78,3 +78,32 @@ as $$
 $$;
 
 grant execute on function public.catalog_products(text) to anon, authenticated;
+
+-- ===========================================================
+-- 3. MINI-SITIO PÚBLICO (datos del negocio en el catálogo)
+-- ===========================================================
+alter table businesses
+  add column if not exists description text not null default '',
+  add column if not exists logo_url text,
+  add column if not exists hours_text text not null default '',
+  add column if not exists instagram text not null default '',
+  add column if not exists tiktok text not null default '',
+  add column if not exists address text not null default '';
+
+-- El RPC del catálogo expone los campos nuevos (cambia la firma → drop)
+drop function if exists public.catalog_business(text);
+create or replace function public.catalog_business(p_slug text)
+returns table (
+  id uuid, name text, slug text, whatsapp text, currency text,
+  description text, logo_url text, hours_text text,
+  instagram text, tiktok text, address text
+)
+language sql stable security definer set search_path = public
+as $$
+  select id, name, slug, whatsapp, currency,
+         description, logo_url, hours_text, instagram, tiktok, address
+  from businesses
+  where slug = p_slug;
+$$;
+
+grant execute on function public.catalog_business(text) to anon, authenticated;
