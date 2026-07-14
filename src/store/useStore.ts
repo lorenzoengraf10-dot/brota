@@ -559,30 +559,43 @@ export const useStore = create<StoreState>()(
 
       // ── orders ────────────────────────────────────
       // Ajusta el stock de los productos con control activo (stock !== null).
+      // Ítems con variantId descuentan el stock de esa variante; si la
+      // variante ya no existe, se ignora en silencio (pedidos viejos).
       // sign = -1 al vender, +1 al deshacer (borrar/editar pedido).
       applyStock: async (items: OrderItem[], sign: 1 | -1) => {
+        // Delta por producto+variante (misma variante repetida se acumula)
         const deltas = new Map<string, number>()
         for (const it of items) {
           if (!it.productId) continue
-          deltas.set(it.productId, (deltas.get(it.productId) ?? 0) + sign * it.quantity)
+          const key = `${it.productId}:${it.variantId ?? ''}`
+          deltas.set(key, (deltas.get(key) ?? 0) + sign * it.quantity)
         }
         const { products } = get()
-        const updates: { id: string; stock: number }[] = []
-        for (const [pid, delta] of deltas) {
-          const p = products.find((x) => x.id === pid)
-          if (!p || p.stock === null) continue
-          updates.push({ id: pid, stock: Math.max(0, p.stock + delta) })
+        const updated = new Map<string, Product>()
+        for (const [key, delta] of deltas) {
+          const [pid, vid] = key.split(':')
+          const p = updated.get(pid) ?? products.find((x) => x.id === pid)
+          if (!p) continue
+          if (vid) {
+            const variant = p.variants?.find((v) => v.id === vid)
+            if (!variant || variant.stock === null) continue
+            updated.set(pid, {
+              ...p,
+              variants: (p.variants ?? []).map((v) =>
+                v.id === vid ? { ...v, stock: Math.max(0, (v.stock ?? 0) + delta) } : v
+              ),
+            })
+          } else {
+            if (p.stock === null) continue
+            updated.set(pid, { ...p, stock: Math.max(0, p.stock + delta) })
+          }
         }
-        if (updates.length === 0) return
+        if (updated.size === 0) return
         set((s) => ({
-          products: s.products.map((p) => {
-            const u = updates.find((x) => x.id === p.id)
-            return u ? { ...p, stock: u.stock } : p
-          }),
+          products: s.products.map((p) => updated.get(p.id) ?? p),
         }))
-        for (const u of updates) {
-          const row = get().products.find((p) => p.id === u.id)
-          if (row) get().enqueue({ kind: 'upsert', table: 'products', row: toSnake(row as unknown as Record<string, unknown>) })
+        for (const row of updated.values()) {
+          get().enqueue({ kind: 'upsert', table: 'products', row: toSnake(row as unknown as Record<string, unknown>) })
         }
       },
 

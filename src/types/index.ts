@@ -26,6 +26,17 @@ export interface Business {
   createdAt: string
 }
 
+// Variante de un producto (talla, color, presentación).
+// Se guarda embebida en products.variants como JSONB; las claves quedan en
+// camelCase porque toSnake/toCamel solo convierten el nivel superior.
+export interface ProductVariant {
+  id: string
+  name: string // "M / Negro", "500g"
+  salePrice: number | null // null = hereda el precio del producto
+  costPrice: number | null
+  stock: number | null // null = sin control de stock
+}
+
 export interface Product {
   id: string
   businessId: string
@@ -35,6 +46,10 @@ export interface Product {
   stock: number | null
   // Foto para el catálogo público (URL pública de Supabase Storage)
   imageUrl?: string | null
+  // null/undefined = sin variantes
+  variants?: ProductVariant[] | null
+  // Alerta "por agotarse" cuando stock <= umbral; null = sin alerta
+  lowStockThreshold?: number | null
   createdAt: string
 }
 
@@ -60,10 +75,12 @@ export interface Customer {
 
 export interface OrderItem {
   productId: string
+  // Si es una variante, el nombre ya viene compuesto: "Producto — Variante"
   name: string
   quantity: number
   unitSalePrice: number
   unitCostPrice: number
+  variantId?: string | null
 }
 
 export interface Order {

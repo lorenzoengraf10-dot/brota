@@ -263,31 +263,47 @@ function OrderForm({
   const [saving, setSaving] = useState(false)
   const [showItemForm, setShowItemForm] = useState(false)
   const [itemProductId, setItemProductId] = useState('')
+  const [itemVariantId, setItemVariantId] = useState('')
   const [itemName, setItemName] = useState('')
   const [itemQty, setItemQty] = useState('1')
   const [itemPrice, setItemPrice] = useState('')
   const [itemCost, setItemCost] = useState('0')
 
+  const pickedProduct = products.find(p => p.id === itemProductId)
+  const needsVariant = !!pickedProduct?.variants?.length && !itemVariantId
+
   function pickProduct(id: string) {
     const p = products.find(p => p.id === id)
     if (!p) return
     setItemProductId(p.id)
+    setItemVariantId('')
     setItemName(p.name)
     setItemPrice(String(p.salePrice))
     setItemCost(String(p.costPrice))
   }
 
+  function pickVariant(vid: string) {
+    const p = products.find(p => p.id === itemProductId)
+    const v = p?.variants?.find(v => v.id === vid)
+    setItemVariantId(vid)
+    if (!p || !v) return
+    setItemName(`${p.name} — ${v.name}`)
+    setItemPrice(String(v.salePrice ?? p.salePrice))
+    setItemCost(String(v.costPrice ?? p.costPrice))
+  }
+
   function addItem() {
-    if (!itemName.trim()) return
+    if (!itemName.trim() || needsVariant) return
     const item: OrderItem = {
       productId: itemProductId,
       name: itemName.trim(),
       quantity: Math.max(1, parseCount(itemQty)),
       unitSalePrice: parseMoney(itemPrice),
       unitCostPrice: parseMoney(itemCost),
+      variantId: itemVariantId || null,
     }
     setForm(f => ({ ...f, items: [...f.items, item] }))
-    setItemProductId(''); setItemName(''); setItemQty('1'); setItemPrice(''); setItemCost('0')
+    setItemProductId(''); setItemVariantId(''); setItemName(''); setItemQty('1'); setItemPrice(''); setItemCost('0')
     setShowItemForm(false)
   }
 
@@ -359,6 +375,20 @@ function OrderForm({
                     {products.map(p => <option key={p.id} value={p.id}>{p.name} — {formatCurrency(p.salePrice)}</option>)}
                   </select>
                 )}
+                {!!pickedProduct?.variants?.length && (
+                  <select
+                    className="w-full bg-surface rounded-lg px-3 py-2 text-sm text-ink"
+                    value={itemVariantId}
+                    onChange={e => pickVariant(e.target.value)}
+                  >
+                    <option value="">Elegí la variante...</option>
+                    {pickedProduct.variants.map(v => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}{v.stock !== null ? ` (stock: ${v.stock})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <input type="text" placeholder="Nombre del ítem" value={itemName} onChange={e => setItemName(e.target.value)}
                   className="w-full bg-surface rounded-lg px-3 py-2 text-sm text-ink placeholder:text-ink-soft" />
                 <div className="flex gap-2">
@@ -367,7 +397,10 @@ function OrderForm({
                   <input type="number" placeholder="Precio" min="0" value={itemPrice} onChange={e => setItemPrice(e.target.value)}
                     className="flex-1 bg-surface rounded-lg px-3 py-2 text-sm text-ink" />
                 </div>
-                <button onClick={addItem} className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm font-medium">Agregar ítem</button>
+                <button onClick={addItem} disabled={needsVariant}
+                  className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-50">
+                  {needsVariant ? 'Elegí la variante primero' : 'Agregar ítem'}
+                </button>
               </div>
             )}
 

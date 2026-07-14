@@ -6,10 +6,11 @@ import { isAtLimit, FREE_LIMITS, LAUNCH_FREE } from '@/lib/plan'
 import { uploadProductImage } from '@/lib/images'
 import { trackEvent } from '@/lib/gaTracking'
 import UpgradeModal from '@/components/plan/UpgradeModal'
-import type { Product } from '@/types'
+import { totalStock, isLowStock } from '@/lib/stock'
+import type { Product, ProductVariant } from '@/types'
 
 function emptyProduct(businessId: string): Omit<Product, 'id' | 'createdAt'> {
-  return { businessId, name: '', costPrice: 0, salePrice: 0, stock: null, imageUrl: null }
+  return { businessId, name: '', costPrice: 0, salePrice: 0, stock: null, imageUrl: null, variants: null, lowStockThreshold: null }
 }
 
 export default function Products() {
@@ -85,7 +86,12 @@ export default function Products() {
                   {margin !== null && ` · Margen: ${margin}%`}
                 </p>
                 <p className="text-xs text-ink-soft">
-                  {product.stock === null ? 'Sin control de stock' : `Stock: ${product.stock}`}
+                  {product.variants?.length
+                    ? `${product.variants.length} variante${product.variants.length !== 1 ? 's' : ''}${totalStock(product) !== null ? ` · Stock total: ${totalStock(product)}` : ''}`
+                    : product.stock === null ? 'Sin control de stock' : `Stock: ${product.stock}`}
+                  {isLowStock(product) && (
+                    <span className="ml-1.5 text-[10px] font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full">POR AGOTARSE</span>
+                  )}
                 </p>
               </div>
               <div className="flex gap-1 shrink-0">
@@ -138,11 +144,17 @@ function ProductForm({
 }) {
   const [form, setForm] = useState(() =>
     initial
-      ? { name: initial.name, costPrice: initial.costPrice, salePrice: initial.salePrice, stock: initial.stock, imageUrl: initial.imageUrl ?? null, businessId: initial.businessId }
+      ? { name: initial.name, costPrice: initial.costPrice, salePrice: initial.salePrice, stock: initial.stock, imageUrl: initial.imageUrl ?? null, variants: initial.variants ?? null, lowStockThreshold: initial.lowStockThreshold ?? null, businessId: initial.businessId }
       : emptyProduct(businessId)
   )
   const [saving, setSaving] = useState(false)
   const [hasStock, setHasStock] = useState(initial ? initial.stock !== null : false)
+  const [hasVariants, setHasVariants] = useState(!!initial?.variants?.length)
+  const [hasAlert, setHasAlert] = useState(initial ? initial.lowStockThreshold != null : false)
+
+  function updateVariant(id: string, patch: Partial<ProductVariant>) {
+    setForm(f => ({ ...f, variants: (f.variants ?? []).map(v => v.id === id ? { ...v, ...patch } : v) }))
+  }
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -166,7 +178,16 @@ function ProductForm({
   async function handleSave() {
     if (!form.name.trim()) return
     setSaving(true)
-    await onSave({ ...form, stock: hasStock ? (form.stock ?? 0) : null })
+    const variants = hasVariants
+      ? (form.variants ?? []).filter(v => v.name.trim())
+      : null
+    await onSave({
+      ...form,
+      variants: variants?.length ? variants : null,
+      // Con variantes, el stock se controla por variante
+      stock: variants?.length ? null : hasStock ? (form.stock ?? 0) : null,
+      lowStockThreshold: hasAlert ? (form.lowStockThreshold ?? 3) : null,
+    })
     setSaving(false)
   }
 
@@ -244,22 +265,102 @@ function ProductForm({
             </div>
           )}
 
+          {/* Variantes (talla, color, presentación) */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-ink-soft uppercase tracking-wide">Control de stock</label>
+              <label className="text-xs font-semibold text-ink-soft uppercase tracking-wide">Variantes (talla, color...)</label>
               <button
-                onClick={() => setHasStock(v => !v)}
-                className={`w-11 h-6 rounded-full transition-colors ${ hasStock ? 'bg-brand-600' : 'bg-black/20' }`}
+                onClick={() => {
+                  setHasVariants(v => !v)
+                  if (!hasVariants && !form.variants?.length) {
+                    setForm(f => ({ ...f, variants: [{ id: crypto.randomUUID(), name: '', salePrice: null, costPrice: null, stock: null }] }))
+                  }
+                }}
+                className={`w-11 h-6 rounded-full transition-colors ${ hasVariants ? 'bg-brand-600' : 'bg-black/20' }`}
               >
-                <span className={`block w-5 h-5 rounded-full bg-white shadow m-0.5 transition-transform ${ hasStock ? 'translate-x-5' : '' }`} />
+                <span className={`block w-5 h-5 rounded-full bg-white shadow m-0.5 transition-transform ${ hasVariants ? 'translate-x-5' : '' }`} />
               </button>
             </div>
-            {hasStock && (
-              <input type="number" min="0" placeholder="0" value={form.stock ?? ''}
-                onChange={e => setForm(f => ({ ...f, stock: parseCount(e.target.value) }))}
-                className="w-full bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink" />
+            {hasVariants && (
+              <div className="space-y-2">
+                {(form.variants ?? []).map(v => (
+                  <div key={v.id} className="bg-black/5 dark:bg-white/10 rounded-xl p-2.5 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input type="text" placeholder="Ej: M / Negro" value={v.name}
+                        onChange={e => updateVariant(v.id, { name: e.target.value })}
+                        className="flex-1 bg-surface rounded-lg px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-soft" />
+                      <button
+                        onClick={() => setForm(f => ({ ...f, variants: (f.variants ?? []).filter(x => x.id !== v.id) }))}
+                        className="p-1.5 rounded-lg bg-red-50 text-red-500 shrink-0"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="number" min="0" placeholder={`Precio (${form.salePrice || 0})`}
+                        value={v.salePrice ?? ''}
+                        onChange={e => updateVariant(v.id, { salePrice: e.target.value === '' ? null : parseMoney(e.target.value) })}
+                        className="bg-surface rounded-lg px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-soft" />
+                      <input type="number" min="0" placeholder="Stock (opcional)"
+                        value={v.stock ?? ''}
+                        onChange={e => updateVariant(v.id, { stock: e.target.value === '' ? null : parseCount(e.target.value) })}
+                        className="bg-surface rounded-lg px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-soft" />
+                    </div>
+                  </div>
+                ))}
+                <button
+                  onClick={() => setForm(f => ({ ...f, variants: [...(f.variants ?? []), { id: crypto.randomUUID(), name: '', salePrice: null, costPrice: null, stock: null }] }))}
+                  className="text-brand-600 text-sm font-medium"
+                >
+                  + Agregar variante
+                </button>
+                <p className="text-[11px] text-ink-soft">Sin precio, la variante usa el precio del producto. Con stock, se descuenta al vender.</p>
+              </div>
             )}
           </div>
+
+          {!hasVariants && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-ink-soft uppercase tracking-wide">Control de stock</label>
+                <button
+                  onClick={() => setHasStock(v => !v)}
+                  className={`w-11 h-6 rounded-full transition-colors ${ hasStock ? 'bg-brand-600' : 'bg-black/20' }`}
+                >
+                  <span className={`block w-5 h-5 rounded-full bg-white shadow m-0.5 transition-transform ${ hasStock ? 'translate-x-5' : '' }`} />
+                </button>
+              </div>
+              {hasStock && (
+                <input type="number" min="0" placeholder="0" value={form.stock ?? ''}
+                  onChange={e => setForm(f => ({ ...f, stock: parseCount(e.target.value) }))}
+                  className="w-full bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink" />
+              )}
+            </div>
+          )}
+
+          {/* Alerta de stock bajo */}
+          {(hasStock || hasVariants) && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-ink-soft uppercase tracking-wide">Avisarme cuando quede poco</label>
+                <button
+                  onClick={() => setHasAlert(v => !v)}
+                  className={`w-11 h-6 rounded-full transition-colors ${ hasAlert ? 'bg-brand-600' : 'bg-black/20' }`}
+                >
+                  <span className={`block w-5 h-5 rounded-full bg-white shadow m-0.5 transition-transform ${ hasAlert ? 'translate-x-5' : '' }`} />
+                </button>
+              </div>
+              {hasAlert && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-ink-soft">Avisar con</span>
+                  <input type="number" min="0" placeholder="3" value={form.lowStockThreshold ?? ''}
+                    onChange={e => setForm(f => ({ ...f, lowStockThreshold: e.target.value === '' ? null : parseCount(e.target.value) }))}
+                    className="w-20 bg-black/5 dark:bg-white/10 rounded-xl px-3 py-2 text-sm text-ink text-center" />
+                  <span className="text-sm text-ink-soft">unidades o menos</span>
+                </div>
+              )}
+            </div>
+          )}
 
           <button onClick={handleSave} disabled={saving || uploading}
             className="w-full bg-brand-600 text-white font-semibold py-3 rounded-2xl text-sm disabled:opacity-50">

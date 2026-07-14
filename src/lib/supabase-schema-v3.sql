@@ -52,3 +52,29 @@ drop trigger if exists on_auth_user_created_founder on auth.users;
 create trigger on_auth_user_created_founder
   after insert on auth.users
   for each row execute function handle_new_user_founder();
+
+-- ===========================================================
+-- 2. VARIANTES DE PRODUCTO + ALERTA DE STOCK BAJO
+-- ===========================================================
+-- Variantes embebidas como JSONB (claves en camelCase, las escribe la app):
+-- [{ "id", "name", "salePrice", "costPrice", "stock" }]
+-- null = producto sin variantes. Se elige JSONB (no tabla aparte) para que
+-- el sync offline siga siendo un upsert por producto.
+alter table products
+  add column if not exists variants jsonb,
+  add column if not exists low_stock_threshold integer;
+
+-- El catálogo público ahora expone variantes (cambia la firma → drop primero)
+drop function if exists public.catalog_products(text);
+create or replace function public.catalog_products(p_slug text)
+returns table (id uuid, name text, sale_price numeric, stock integer, image_url text, variants jsonb)
+language sql stable security definer set search_path = public
+as $$
+  select p.id, p.name, p.sale_price, p.stock, p.image_url, p.variants
+  from products p
+  join businesses b on b.id = p.business_id
+  where b.slug = p_slug
+  order by p.name;
+$$;
+
+grant execute on function public.catalog_products(text) to anon, authenticated;

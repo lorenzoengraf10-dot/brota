@@ -2,7 +2,9 @@ import { useStore } from '@/store/useStore'
 import { formatCurrency, formatDate, formatShortDate, today, isoWeekStart } from '@/lib/format'
 import { orderTotal } from '@/lib/receipt'
 import { dueState, dueLabel, dueBadgeClass } from '@/lib/delivery'
-import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package, Users, Receipt, BarChart2, ChevronRight, Truck, HandCoins } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Package, Users, Receipt, BarChart2, ChevronRight, Truck, HandCoins, PackageOpen } from 'lucide-react'
+import { isLowStock, totalStock } from '@/lib/stock'
+import { canUseSocialMedia } from '@/lib/plan'
 import { BarChart, Bar, XAxis, ResponsiveContainer } from 'recharts'
 import ShareCard from '@/components/marketing/ShareCard'
 import type { ReactNode } from 'react'
@@ -64,6 +66,7 @@ export default function Dashboard() {
 
   const deliveriesToday = orders.filter(o => o.dueDate === today() && o.status !== 'completed')
   const totalDebt = orders.filter(o => o.paid === false).reduce((s, o) => s + orderTotal(o), 0)
+  const lowStock = products.filter(isLowStock)
 
   // Ventas completadas por semana, últimas 6 semanas
   const weeks = Array.from({ length: 6 }, (_, i) => {
@@ -127,6 +130,26 @@ export default function Dashboard() {
         </button>
       )}
 
+      {lowStock.length > 0 && (
+        <button
+          onClick={() => setView('products')}
+          className="w-full flex items-center gap-3 bg-orange-100 dark:bg-orange-500/15 rounded-2xl p-3.5 text-left"
+        >
+          <span className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center shrink-0">
+            <PackageOpen size={17} color="white" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">
+              {lowStock.length} producto{lowStock.length !== 1 ? 's' : ''} por agotarse
+            </p>
+            <p className="text-xs text-orange-700/70 dark:text-orange-300/70 truncate">
+              {lowStock.slice(0, 3).map(p => `${p.name} (${totalStock(p)})`).join(', ')}
+            </p>
+          </div>
+          <ChevronRight size={16} className="text-orange-700 dark:text-orange-300 shrink-0" />
+        </button>
+      )}
+
       <section className="grid grid-cols-2 gap-3">
         <NavCard onClick={() => setView('orders')} icon={<ShoppingBag size={18} color="white" />} bg="bg-brand-600" count={activeOrders.length} label="Pedidos activos" />
         <NavCard onClick={() => setView('products')} icon={<Package size={18} color="white" />} bg="bg-azure-600" count={products.length} label="Productos" />
@@ -157,7 +180,7 @@ export default function Dashboard() {
           <p className="font-semibold text-ink text-sm">Redes Sociales</p>
           <p className="text-xs text-ink-soft">Métricas semanales de Instagram, TikTok y Facebook</p>
         </div>
-        {user?.plan !== 'pro' && (
+        {!canUseSocialMedia(user?.plan ?? 'free') && (
           <span className="text-[10px] font-bold text-brand-600 bg-brand-600/10 px-2 py-1 rounded-full shrink-0">PRO</span>
         )}
         <ChevronRight size={16} className="text-ink-soft shrink-0" />
