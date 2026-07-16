@@ -149,12 +149,12 @@ export default function AppLayout() {
     <div className="flex h-full bg-cream">
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 h-full max-w-lg mx-auto lg:max-w-none lg:mx-0">
-      <header className="flex items-center justify-between px-4 py-3 bg-surface border-b border-black/5 sticky top-0 z-40">
+      <header className="flex items-center justify-between px-4 py-3 bg-surface/85 backdrop-blur-md border-b border-black/[0.03] dark:border-white/[0.03] sticky top-0 z-40">
         <button
           onClick={() => setView('dashboard')}
-          className="flex items-center gap-2 lg:invisible"
+          className="flex items-center gap-2 lg:invisible active:scale-95 transition-transform"
         >
-          <span className="w-7 h-7 rounded-xl bg-brand-600 flex items-center justify-center">
+          <span className="w-7 h-7 rounded-[14px] bg-brand-600 flex items-center justify-center">
             <Sprout size={14} color="white" strokeWidth={2.5} />
           </span>
           <span className="font-bold text-ink text-[17px] tracking-tight">Brota</span>
@@ -162,7 +162,7 @@ export default function AppLayout() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowNotifications(true)}
-            className="relative p-2 rounded-full hover:bg-black/5 transition-colors"
+            className="relative p-2 rounded-full hover:bg-black/5 active:scale-95 transition-all"
           >
             <Bell size={20} className="text-ink-soft" strokeWidth={1.75} />
             {unread > 0 && (
@@ -173,7 +173,7 @@ export default function AppLayout() {
           </button>
           <button
             onClick={() => setView('settings')}
-            className="p-2 rounded-full hover:bg-black/5 transition-colors lg:hidden"
+            className="p-2 rounded-full hover:bg-black/5 active:scale-95 transition-all lg:hidden"
           >
             <Settings size={20} className="text-ink-soft" strokeWidth={1.75} />
           </button>

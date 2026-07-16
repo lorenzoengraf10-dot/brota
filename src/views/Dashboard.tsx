@@ -28,8 +28,8 @@ function KPICard({ icon, iconBg, label, value, valueClass = 'text-ink' }: {
   icon: ReactNode; iconBg: string; label: string; value: string; valueClass?: string
 }) {
   return (
-    <div className="bg-surface rounded-2xl p-3 shadow-sm">
-      <div className={`w-8 h-8 rounded-xl ${iconBg} flex items-center justify-center mb-2`}>{icon}</div>
+    <div className="bg-surface rounded-[20px] p-3 shadow-sm border border-black/[0.03] dark:border-white/[0.03]">
+      <div className={`w-8 h-8 rounded-[14px] ${iconBg} flex items-center justify-center mb-2`}>{icon}</div>
       <p className="text-[11px] text-ink-soft">{label}</p>
       <p className={`text-sm font-bold leading-tight ${valueClass}`}>{value}</p>
     </div>
@@ -42,9 +42,9 @@ function NavCard({ onClick, icon, bg, count, label }: {
   return (
     <button
       onClick={onClick}
-      className="bg-surface rounded-2xl p-4 flex items-center gap-3 shadow-sm active:scale-[0.97] transition-transform text-left"
+      className="bg-surface rounded-[20px] p-4 flex flex-col items-start gap-3 shadow-sm border border-black/[0.03] dark:border-white/[0.03] active:scale-95 transition-all duration-200 text-left"
     >
-      <span className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center shrink-0`}>{icon}</span>
+      <span className={`w-10 h-10 rounded-[14px] ${bg} flex items-center justify-center shrink-0`}>{icon}</span>
       <div>
         <p className="text-xl font-bold text-ink">{count}</p>
         <p className="text-xs text-ink-soft">{label}</p>
@@ -156,7 +156,7 @@ export default function Dashboard() {
 
       <button
         onClick={() => setShowQuickSale(true)}
-        className="w-full flex items-center justify-center gap-2 bg-brand-600 text-white rounded-2xl py-3.5 font-bold text-sm shadow-sm active:scale-[0.98] transition-transform"
+        className="w-full flex items-center justify-center gap-2 bg-brand-600 text-white rounded-[20px] py-4 font-bold text-sm shadow-lg shadow-brand-600/25 active:scale-95 transition-all duration-200"
       >
         <Zap size={17} /> Venta rápida
       </button>
