@@ -37,10 +37,19 @@ export default function QuickSale({ open, onClose }: { open: boolean; onClose: (
     [products, search]
   )
 
-  const total = [...lines.values()].reduce(
-    (s, l) => s + (l.variant?.salePrice ?? l.product.salePrice) * l.qty, 0
-  )
-  const count = [...lines.values()].reduce((s, l) => s + l.qty, 0)
+  // Derivados del ticket: solo se recalculan cuando cambian las líneas,
+  // no en cada tecleo del buscador (que cambia `search`, no `lines`).
+  const { total, count, qtyByProduct } = useMemo(() => {
+    let total = 0
+    let count = 0
+    const qtyByProduct = new Map<string, number>()
+    for (const l of lines.values()) {
+      total += (l.variant?.salePrice ?? l.product.salePrice) * l.qty
+      count += l.qty
+      qtyByProduct.set(l.product.id, (qtyByProduct.get(l.product.id) ?? 0) + l.qty)
+    }
+    return { total, count, qtyByProduct }
+  }, [lines])
 
   if (!open) return null
 
@@ -124,9 +133,7 @@ export default function QuickSale({ open, onClose }: { open: boolean; onClose: (
           <div className="grid grid-cols-2 gap-2">
             {filtered.map(p => {
               // Cantidad total de este producto en el ticket (todas las variantes)
-              const inCart = [...lines.values()]
-                .filter(l => l.product.id === p.id)
-                .reduce((s, l) => s + l.qty, 0)
+              const inCart = qtyByProduct.get(p.id) ?? 0
               const out = !p.variants?.length && p.stock !== null && p.stock <= 0
               return (
                 <button

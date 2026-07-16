@@ -78,11 +78,16 @@ export default function Dashboard() {
     d.setDate(d.getDate() - (5 - i) * 7)
     return isoWeekStart(d)
   })
+  // Bucketeo en una sola pasada por `orders` (antes: 6 filtros completos)
+  const salesByWeek = new Map<string, number>()
+  for (const o of orders) {
+    if (o.status !== 'completed') continue
+    const ws = isoWeekStart(new Date(o.date + 'T12:00:00'))
+    salesByWeek.set(ws, (salesByWeek.get(ws) ?? 0) + orderTotal(o))
+  }
   const weeklySales = weeks.map(ws => ({
     week: formatShortDate(ws),
-    total: orders
-      .filter(o => o.status === 'completed' && isoWeekStart(new Date(o.date + 'T12:00:00')) === ws)
-      .reduce((s, o) => s + orderTotal(o), 0),
+    total: salesByWeek.get(ws) ?? 0,
   }))
   const hasChartData = weeklySales.some(w => w.total > 0)
 

@@ -136,6 +136,7 @@ export default function PublicCatalog({ slug }: { slug: string }) {
 
   const canOrder = !!business.whatsapp
   const count = cartCount(cart)
+  const total = cartTotal(cart)
 
   return (
     <div className="min-h-full bg-cream">
@@ -217,7 +218,7 @@ export default function PublicCatalog({ slug }: { slug: string }) {
           className="fixed bottom-4 left-4 right-4 max-w-lg mx-auto bg-brand-600 text-white rounded-2xl px-5 py-3.5 shadow-lg flex items-center justify-between z-40"
         >
           <span className="flex items-center gap-2 text-sm font-semibold">
-            <ShoppingCart size={17} /> {count} ítem{count !== 1 ? 's' : ''} · {formatCurrency(cartTotal(cart))}
+            <ShoppingCart size={17} /> {count} ítem{count !== 1 ? 's' : ''} · {formatCurrency(total)}
           </span>
           <span className="text-sm font-bold">Ver pedido →</span>
         </button>
@@ -263,7 +264,7 @@ export default function PublicCatalog({ slug }: { slug: string }) {
             <div className="p-5 pt-3 border-t border-black/5 shrink-0 pb-8">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm text-ink-soft">Total</span>
-                <span className="text-lg font-bold text-ink">{formatCurrency(cartTotal(cart))}</span>
+                <span className="text-lg font-bold text-ink">{formatCurrency(total)}</span>
               </div>
               <a
                 href={cart.length > 0 ? cartWaLink(business.whatsapp, business.name, cart) : undefined}
