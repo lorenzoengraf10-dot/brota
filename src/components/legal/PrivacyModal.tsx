@@ -12,7 +12,7 @@ export default function PrivacyModal() {
         <h1 className="font-bold text-ink">Política de Privacidad</h1>
       </header>
       <div className="flex-1 overflow-y-auto px-5 py-6 prose prose-sm max-w-none text-ink">
-        <p className="text-xs text-ink-soft">Actualizado: junio 2025 · Ley 25.326 (Argentina)</p>
+        <p className="text-xs text-ink-soft">Actualizado: julio 2026 · Ley 25.326 (Argentina)</p>
         <h3>1. Datos que recopilamos</h3>
         <p>Recopilamos el email que ingresás al registrarte y los datos que vos mismo cargás (ventas, clientes, gastos). No compartimos tu información con terceros.</p>
         <h3>2. Cómo usamos tus datos</h3>

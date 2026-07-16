@@ -146,6 +146,10 @@ interface StoreState {
   onboardingDone: boolean
   landingSeen: boolean
 
+  // Demo (datos de ejemplo, sin registro ni backend)
+  demoMode: boolean
+  enterDemo: () => void
+
   // Auth
   initialize: () => Promise<void>
   signOut: () => Promise<void>
@@ -224,6 +228,29 @@ const EMPTY_DATA = {
   pendingOps: [] as PendingOp[],
 }
 
+// Estado de la demo (datos de ejemplo, sin backend). Lo comparten el arranque
+// por env (VITE_DEMO_MODE) y el botón "Ver demo" de la landing.
+function demoDataPatch() {
+  const seed = buildDemoSeed()
+  return {
+    loadingAuth: false,
+    demoMode: true,
+    user: seed.user,
+    business: seed.business,
+    businesses: [seed.business],
+    activeBusinessId: seed.business.id,
+    products: seed.products,
+    customers: seed.customers,
+    customerGroups: seed.customerGroups,
+    orders: seed.orders,
+    expenses: seed.expenses,
+    socialMetrics: seed.socialMetrics,
+    appointments: seed.appointments,
+    onboardingDone: true,
+    landingSeen: true,
+  }
+}
+
 // ─────────────────────────────────────────────
 // Store
 // ─────────────────────────────────────────────
@@ -232,6 +259,7 @@ export const useStore = create<StoreState>()(
     (set, get) => ({
       user: null,
       loadingAuth: true,
+      demoMode: DEMO_MODE,
       business: null,
       businesses: [],
       activeBusinessId: null,
@@ -262,7 +290,7 @@ export const useStore = create<StoreState>()(
       enqueue: (op) => {
         // Modo demo: los cambios quedan solo en memoria/localStorage,
         // nunca se sincronizan a ningún backend.
-        if (DEMO_MODE) return
+        if (DEMO_MODE || get().demoMode) return
         set((s) => {
           let queue = s.pendingOps
           if (op.kind === 'upsert') {
@@ -319,28 +347,18 @@ export const useStore = create<StoreState>()(
         }
       },
 
+      // Modo demo activado desde la landing: carga datos de ejemplo al
+      // instante y navega al dashboard, sin registro ni backend.
+      enterDemo: () => {
+        set({ ...demoDataPatch(), currentView: 'dashboard' })
+      },
+
       // ── auth ──────────────────────────────────────
       initialize: async () => {
-        // Modo demo: sin Supabase. Se carga contenido de ejemplo y listo,
-        // nunca se toca la red (ver enqueue/signOut más abajo).
-        if (DEMO_MODE) {
-          const seed = buildDemoSeed()
-          set({
-            loadingAuth: false,
-            user: seed.user,
-            business: seed.business,
-            businesses: [seed.business],
-            activeBusinessId: seed.business.id,
-            products: seed.products,
-            customers: seed.customers,
-            customerGroups: seed.customerGroups,
-            orders: seed.orders,
-            expenses: seed.expenses,
-            socialMetrics: seed.socialMetrics,
-            appointments: seed.appointments,
-            onboardingDone: true,
-            landingSeen: true,
-          })
+        // Modo demo (por env VITE_DEMO_MODE o porque el visitante ya tocó
+        // "Ver demo"): sin Supabase, nunca se toca la red (ver enqueue/signOut).
+        if (DEMO_MODE || get().demoMode) {
+          set(demoDataPatch())
           return
         }
 
@@ -391,6 +409,11 @@ export const useStore = create<StoreState>()(
       },
 
       signOut: async () => {
+        // Salir de la demo runtime: volver a la landing como visitante limpio.
+        if (!DEMO_MODE && get().demoMode) {
+          set({ user: null, demoMode: false, landingSeen: false, onboardingDone: false, currentView: 'landing', ...EMPTY_DATA })
+          return
+        }
         if (DEMO_MODE) { set({ user: null, ...EMPTY_DATA }); return }
         await supabase.auth.signOut()
         set({ user: null, ...EMPTY_DATA })
@@ -745,6 +768,7 @@ export const useStore = create<StoreState>()(
       // Persistimos datos y cola para que la app funcione 100% offline
       partialize: (s) => ({
         currentView: s.currentView,
+        demoMode: s.demoMode,
         darkMode: s.darkMode,
         cookieConsent: s.cookieConsent,
         onboardingDone: s.onboardingDone,
