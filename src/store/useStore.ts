@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '@/lib/supabase'
+import { DEMO_MODE } from '@/lib/demo'
+import { buildDemoSeed } from '@/lib/demoData'
 import type {
   AppUser,
   Business,
@@ -258,6 +260,9 @@ export const useStore = create<StoreState>()(
       },
 
       enqueue: (op) => {
+        // Modo demo: los cambios quedan solo en memoria/localStorage,
+        // nunca se sincronizan a ningún backend.
+        if (DEMO_MODE) return
         set((s) => {
           let queue = s.pendingOps
           if (op.kind === 'upsert') {
@@ -316,6 +321,29 @@ export const useStore = create<StoreState>()(
 
       // ── auth ──────────────────────────────────────
       initialize: async () => {
+        // Modo demo: sin Supabase. Se carga contenido de ejemplo y listo,
+        // nunca se toca la red (ver enqueue/signOut más abajo).
+        if (DEMO_MODE) {
+          const seed = buildDemoSeed()
+          set({
+            loadingAuth: false,
+            user: seed.user,
+            business: seed.business,
+            businesses: [seed.business],
+            activeBusinessId: seed.business.id,
+            products: seed.products,
+            customers: seed.customers,
+            customerGroups: seed.customerGroups,
+            orders: seed.orders,
+            expenses: seed.expenses,
+            socialMetrics: seed.socialMetrics,
+            appointments: seed.appointments,
+            onboardingDone: true,
+            landingSeen: true,
+          })
+          return
+        }
+
         set({ loadingAuth: true })
 
         // Evita re-bootear (doble fetch) cuando getSession y el evento
@@ -363,6 +391,7 @@ export const useStore = create<StoreState>()(
       },
 
       signOut: async () => {
+        if (DEMO_MODE) { set({ user: null, ...EMPTY_DATA }); return }
         await supabase.auth.signOut()
         set({ user: null, ...EMPTY_DATA })
       },
