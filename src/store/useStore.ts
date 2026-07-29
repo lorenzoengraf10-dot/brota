@@ -149,6 +149,7 @@ interface StoreState {
   // Demo (datos de ejemplo, sin registro ni backend)
   demoMode: boolean
   enterDemo: () => void
+  exitDemo: () => void
 
   // Auth
   initialize: () => Promise<void>
@@ -351,6 +352,15 @@ export const useStore = create<StoreState>()(
       // instante y navega al dashboard, sin registro ni backend.
       enterDemo: () => {
         set({ ...demoDataPatch(), currentView: 'dashboard' })
+      },
+
+      // Salir de la demo para registrarse o iniciar sesión: a diferencia de
+      // signOut(), va directo a AuthScreen en vez de volver a la landing.
+      // No aplica al modo demo por env (VITE_DEMO_MODE): ese build no tiene
+      // Supabase configurado.
+      exitDemo: () => {
+        if (DEMO_MODE) return
+        set({ user: null, demoMode: false, landingSeen: true, onboardingDone: false, ...EMPTY_DATA })
       },
 
       // ── auth ──────────────────────────────────────

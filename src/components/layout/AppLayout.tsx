@@ -5,6 +5,7 @@ import BottomNav from './BottomNav'
 import Sidebar from './Sidebar'
 import NotificationsSheet from './NotificationsSheet'
 import OfflineBanner from './OfflineBanner'
+import DemoBanner from './DemoBanner'
 import { dueState } from '@/lib/delivery'
 import FeedbackModal from '@/components/marketing/FeedbackModal'
 import ProEntryModal from '@/components/marketing/ProEntryModal'
@@ -180,6 +181,7 @@ export default function AppLayout() {
         </div>
       </header>
 
+      <DemoBanner />
       <OfflineBanner />
 
       <main className="flex-1 overflow-y-auto min-h-0">
