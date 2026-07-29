@@ -2,8 +2,13 @@ import type { Order, Expense, Product, Customer } from '@/types'
 import { formatDate, formatCurrency, today } from './format'
 import { orderTotal } from './receipt'
 
+// Excel/Sheets ejecuta como fórmula cualquier celda que arranque con
+// = + - @ (o tab/CR): un nombre o nota con ese prefijo podría correr
+// código al abrir el CSV. Se neutraliza anteponiendo un apóstrofe.
 function esc(v: string | number | undefined): string {
-  return `"${String(v ?? '').replace(/"/g, '""')}"`
+  let s = String(v ?? '')
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
+  return `"${s.replace(/"/g, '""')}"`
 }
 
 function toCSV(
